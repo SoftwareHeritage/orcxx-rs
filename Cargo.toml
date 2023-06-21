@@ -9,12 +9,16 @@ description = "Rust bindings for the official C++ library for Apache ORC"
 readme = "README.md"
 homepage = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
 repository = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
-license = "GPL-3.0-or-later"
 keywords = ["orc", "apache-orc"]
 categories = ["api-bindings", "encoding", "parser-implementations"]
-build = "build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# orcxx itself is GPL.
+#
+# Apache2 for Apache ORC, BSD for protobuf and snappy, Zlib for zlib.
+# See orc/LICENSE for the text of these licenses
+license = "GPL-3.0-or-later AND Apache2 AND BSD-3-Clause AND Zlib"
+
+build = "build.rs"
 
 [dependencies]
 cxx = "1.0"
