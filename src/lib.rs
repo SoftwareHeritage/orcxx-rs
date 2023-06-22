@@ -25,7 +25,7 @@ mod ffi {
         type ReaderOptions;
         type Reader;
 
-        fn readLocalFile(path: &CxxString) -> UniquePtr<InputStream>;
+        fn readLocalFile(path: &CxxString) -> Result<UniquePtr<InputStream>>;
         fn createReader(
             inStream: UniquePtr<InputStream>,
             options: &ReaderOptions,
@@ -40,9 +40,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn nonexistent_file() {
+        let_cxx_string!(file_name = "orc/examples/nonexistent.orc");
+        assert!(matches!(ffi::readLocalFile(&file_name), Err(_)))
+    }
+
+    #[test]
+    fn read_file() {
         let_cxx_string!(file_name = "orc/examples/TestOrcFile.test1.orc");
-        let input_stream = ffi::readLocalFile(&file_name);
+        let input_stream = ffi::readLocalFile(&file_name).expect("Could not read");
         let options = ffi::ReaderOptions_new();
         ffi::createReader(input_stream, &*options);
     }

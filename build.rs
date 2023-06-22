@@ -24,6 +24,9 @@ fn main() {
     build_bridge(orc_src_dir, orc_build_dir);
     link_bridge(orc_src_dir, orc_build_dir);
     link_cpp_deps(orc_build_dir, orc_build_dir);
+
+    println!("cargo:rerun-if-changed={}/src/lib.rs", manifest_dir);
+    println!("cargo:rerun-if-changed={}/src/cpp-utils.hh", manifest_dir);
 }
 
 /// Configures Apache ORC build
