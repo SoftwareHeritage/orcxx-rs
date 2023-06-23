@@ -12,24 +12,49 @@ mod ffi {
     #[namespace = "orcxx_rs"]
     unsafe extern "C++" {
         include!("cpp-utils.hh");
+        include!("orc/OrcFile.hh");
 
         #[rust_name = "ReaderOptions_new"]
         fn construct() -> UniquePtr<ReaderOptions>;
+
+        #[rust_name = "RowReaderOptions_new"]
+        fn construct() -> UniquePtr<RowReaderOptions>;
     }
 
     #[namespace = "orc"]
     unsafe extern "C++" {
-        include!("orc/OrcFile.hh");
-
         type InputStream;
         type ReaderOptions;
-        type Reader;
+        type RowReaderOptions;
+        type ColumnVectorBatch;
 
         fn readLocalFile(path: &CxxString) -> Result<UniquePtr<InputStream>>;
+    }
+
+    #[namespace = "orc"]
+    unsafe extern "C++" {
+        type Reader;
+
         fn createReader(
             inStream: UniquePtr<InputStream>,
             options: &ReaderOptions,
         ) -> UniquePtr<Reader>;
+
+        fn createRowReader(&self, rowReaderOptions: &RowReaderOptions) -> UniquePtr<RowReader>;
+    }
+
+    #[namespace = "orc"]
+    unsafe extern "C++" {
+        type RowReader;
+
+        fn createRowBatch(&self, size: u64) -> UniquePtr<ColumnVectorBatch>;
+
+        fn next(self: Pin<&mut RowReader>, data: Pin<&mut ColumnVectorBatch>) -> bool;
+    }
+
+    #[namespace = "orcxx_rs"]
+    unsafe extern "C++" {
+        fn get_numElements(vectorBatch: &ColumnVectorBatch) -> u64;
     }
 }
 
@@ -49,7 +74,22 @@ mod tests {
     fn read_file() {
         let_cxx_string!(file_name = "orc/examples/TestOrcFile.test1.orc");
         let input_stream = ffi::readLocalFile(&file_name).expect("Could not read");
-        let options = ffi::ReaderOptions_new();
-        ffi::createReader(input_stream, &*options);
+
+        let reader_options = ffi::ReaderOptions_new();
+        let reader = ffi::createReader(input_stream, &*reader_options);
+
+        let row_reader_options = ffi::RowReaderOptions_new();
+        let mut row_reader = reader.createRowReader(&*row_reader_options);
+
+        let mut batch = row_reader.createRowBatch(1024);
+
+        let mut total_elements = 0;
+        while row_reader.pin_mut().next(batch.pin_mut()) {
+            for _ in 0..ffi::get_numElements(&*batch) {
+                total_elements+= 1;
+            }
+        }
+
+        assert_eq!(total_elements, 2);
     }
 }

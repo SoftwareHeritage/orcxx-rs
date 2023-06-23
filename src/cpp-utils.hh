@@ -10,4 +10,12 @@ namespace orcxx_rs {
     {
       return std::make_unique<T>(args...);
     }
+
+
+    template<typename T, typename Ret>
+    Ret
+    get_numElements(T &obj)
+    {
+      return obj.numElements;
+    }
 }
