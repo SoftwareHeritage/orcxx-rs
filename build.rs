@@ -31,7 +31,12 @@ fn main() {
         orc_build_include_dir.display()
     ));
 
-    let build = OrcxxBuild { orc_src_dir, orc_build_dir, orc_src_include_dir, orc_build_include_dir };
+    let build = OrcxxBuild {
+        orc_src_dir,
+        orc_build_dir,
+        orc_src_include_dir,
+        orc_build_include_dir,
+    };
 
     build.run_cmake();
     build.run_make(&make_flags);
@@ -52,7 +57,6 @@ struct OrcxxBuild<'a> {
 }
 
 impl<'a> OrcxxBuild<'a> {
-
     /// Configures Apache ORC build
     fn run_cmake(&self) {
         let status = process::Command::new("cmake")

@@ -86,7 +86,7 @@ mod tests {
         let mut total_elements = 0;
         while row_reader.pin_mut().next(batch.pin_mut()) {
             for _ in 0..ffi::get_numElements(&*batch) {
-                total_elements+= 1;
+                total_elements += 1;
             }
         }
 
