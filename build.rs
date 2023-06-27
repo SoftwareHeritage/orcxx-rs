@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 use std::process;
 
+const BRIDGE_MODULES: [&str; 3] = ["src/reader.rs", "src/memorypool.rs", "src/vector.rs"];
+
 fn main() {
     let make_flags = env::var("CARGO_MAKEFLAGS").expect("Missing CARGO_MAKEFLAGS");
 
@@ -45,7 +47,9 @@ fn main() {
     build.link_cpp_deps();
 
     println!("cargo:rerun-if-changed={}", orc_src_dir.display());
-    println!("cargo:rerun-if-changed={}/src/lib.rs", manifest_dir);
+    for module in BRIDGE_MODULES {
+        println!("cargo:rerun-if-changed={}/{}.rs", manifest_dir, module);
+    }
     println!("cargo:rerun-if-changed={}/src/cpp-utils.hh", manifest_dir);
 }
 
@@ -87,7 +91,7 @@ impl<'a> OrcxxBuild<'a> {
 
     /// Compiles the C++ <-> Rust bridge code
     fn build_bridge(&self) {
-        cxx_build::bridge("src/lib.rs")
+        cxx_build::bridges(BRIDGE_MODULES)
             .include("src")
             .include(self.orc_src_include_dir)
             .include(self.orc_build_include_dir)
