@@ -3,6 +3,15 @@
 #include <orc/MemoryPool.hh>
 #include <orc/Vector.hh>
 
+
+#define getter(name) \
+    template<typename T, typename Ret> \
+    Ret \
+    get_## name(T &obj) \
+    { \
+      return obj.name; \
+    }
+
 namespace orcxx_rs {
 
     namespace utils {
@@ -37,34 +46,10 @@ namespace orcxx_rs {
     }
 
     namespace accessors {
-        template<typename T, typename Ret>
-        Ret
-        get_numElements(T &obj)
-        {
-          return obj.numElements;
-        }
-
-
-        template<typename T, typename Ret>
-        Ret
-        get_length(T &obj)
-        {
-          return obj.length;
-        }
-
-        template<typename T, typename Ret>
-        Ret
-        get_data(T &obj)
-        {
-          return obj.data;
-        }
-
-        template<typename T, typename Ret>
-        Ret
-        get_fields(T &obj)
-        {
-          return obj.fields;
-        }
+        getter(numElements);
+        getter(length);
+        getter(data);
+        getter(fields);
     }
 
     typedef orc::DataBuffer<char*> StringDataBuffer;
