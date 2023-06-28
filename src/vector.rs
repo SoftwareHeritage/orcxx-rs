@@ -4,12 +4,40 @@
 // See top-level LICENSE file for more information
 
 use std::convert::TryInto;
+use std::fmt;
 use std::marker::PhantomData;
 use std::os::raw::c_char;
 
 use cxx::UniquePtr;
 
 use utils::{OrcError, OrcResult};
+
+// TODO: remove $function_name when https://github.com/rust-lang/rust/issues/29599
+// is stabilized
+macro_rules! impl_debug {
+    ($struct_name:ident, $function_name:path) => {
+        impl fmt::Debug for $struct_name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    f,
+                    concat!(stringify!($struct_name), " {{ {} }}"),
+                    $function_name(&self.0)
+                )
+            }
+        }
+    };
+    ($struct_name:ident<$lifetime:lifetime>, $function_name:path) => {
+        impl<$lifetime> fmt::Debug for $struct_name<$lifetime> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    f,
+                    concat!(stringify!($struct_name), " {{ {} }}"),
+                    $function_name(&self.0)
+                )
+            }
+        }
+    };
+}
 
 #[cxx::bridge]
 pub(crate) mod ffi {
@@ -65,11 +93,20 @@ pub(crate) mod ffi {
 
         #[rust_name = "StringVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &StringVectorBatch) -> &ColumnVectorBatch;
+
+        #[rust_name = "ColumnVectorBatch_toString"]
+        fn toString(type_: &ColumnVectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "StringVectorBatch_toString"]
+        fn toString(type_: &StringVectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "StructVectorBatch_toString"]
+        fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
     }
 }
 
 /// A column (or set of column) of a stripe, with values of unknown type.
 pub struct OwnedColumnVectorBatch(pub(crate) UniquePtr<ffi::ColumnVectorBatch>);
+
+impl_debug!(OwnedColumnVectorBatch, ffi::ColumnVectorBatch_toString);
 
 impl OwnedColumnVectorBatch {
     pub fn num_elements(&self) -> u64 {
@@ -85,6 +122,11 @@ impl OwnedColumnVectorBatch {
 
 /// A column (or set of column) of a stripe, with values of unknown type.
 pub struct BorrowedColumnVectorBatch<'a>(&'a ffi::ColumnVectorBatch);
+
+impl_debug!(
+    BorrowedColumnVectorBatch<'a>,
+    ffi::ColumnVectorBatch_toString
+);
 
 impl<'a> BorrowedColumnVectorBatch<'a> {
     pub fn num_elements(&self) -> u64 {
@@ -110,6 +152,8 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
 /// or  [`BorrowedColumnVectorBatch::as_structs`]
 pub struct StructVectorBatch<'a>(&'a ffi::StructVectorBatch);
 
+impl_debug!(StructVectorBatch<'a>, ffi::StructVectorBatch_toString);
+
 impl<'a> StructVectorBatch<'a> {
     pub fn fields(&self) -> Vec<BorrowedColumnVectorBatch> {
         ffi::StructVectorBatch_get_fields(&self.0)
@@ -133,6 +177,8 @@ impl<'a> StructVectorBatch<'a> {
 /// or  [`BorrowedColumnVectorBatch::as_strings`]
 pub struct StringVectorBatch<'a>(&'a ffi::StringVectorBatch);
 
+impl_debug!(StringVectorBatch<'a>, ffi::StringVectorBatch_toString);
+
 impl<'a> StringVectorBatch<'a> {
     pub fn iter(&self) -> StringVectorBatchIterator {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
@@ -152,6 +198,7 @@ impl<'a> StringVectorBatch<'a> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct StringVectorBatchIterator<'a> {
     batch: PhantomData<&'a StringVectorBatch<'a>>,
     index: isize,

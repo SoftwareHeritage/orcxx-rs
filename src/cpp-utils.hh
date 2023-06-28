@@ -43,6 +43,11 @@ namespace orcxx_rs {
         {
           return obj;
         }
+
+        template<typename T>
+        std::unique_ptr<std::string> toString(T &obj) {
+            return std::make_unique<std::string>(obj.toString());
+        }
     }
 
     namespace accessors {
