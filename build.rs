@@ -3,7 +3,12 @@ use std::fs;
 use std::path::Path;
 use std::process;
 
-const BRIDGE_MODULES: [&str; 3] = ["src/reader.rs", "src/memorypool.rs", "src/vector.rs"];
+const BRIDGE_MODULES: [&str; 4] = [
+    "src/kind.rs",
+    "src/reader.rs",
+    "src/memorypool.rs",
+    "src/vector.rs",
+];
 
 fn main() {
     let make_flags = env::var("CARGO_MAKEFLAGS").expect("Missing CARGO_MAKEFLAGS");

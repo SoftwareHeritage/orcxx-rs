@@ -1,6 +1,7 @@
 #include <memory>
 
 #include <orc/MemoryPool.hh>
+#include <orc/Type.hh>
 #include <orc/Vector.hh>
 
 
@@ -48,6 +49,14 @@ namespace orcxx_rs {
         std::unique_ptr<std::string> toString(T &obj) {
             return std::make_unique<std::string>(obj.toString());
         }
+    }
+
+
+    // Hack: using a template to force the compiler to inline it, so it is not
+    // duplicated across modules.
+    template<typename T>
+    T buildTypeFromString(const std::string &input) {
+        return orc::Type::buildTypeFromString(input);
     }
 
     namespace accessors {

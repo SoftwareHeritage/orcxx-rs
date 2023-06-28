@@ -5,6 +5,7 @@
 
 extern crate cxx;
 
+pub mod kind;
 pub mod memorypool;
 pub mod reader;
 pub mod utils;

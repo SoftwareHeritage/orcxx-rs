@@ -16,6 +16,18 @@ impl fmt::Display for OrcError {
 
 impl std::error::Error for OrcError {}
 
+impl From<cxx::Exception> for OrcError {
+    fn from(exception: cxx::Exception) -> Self {
+        OrcError(exception)
+    }
+}
+
+impl PartialEq for OrcError {
+    fn eq(&self, other: &Self) -> bool {
+        self.what() == other.what()
+    }
+}
+
 impl OrcError {
     pub fn what(&self) -> &str {
         self.0.what()
