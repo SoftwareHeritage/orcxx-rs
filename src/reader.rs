@@ -5,6 +5,7 @@
 
 use cxx::{let_cxx_string, UniquePtr};
 
+use kind;
 use utils::{OrcError, OrcResult};
 use vector;
 
@@ -26,6 +27,7 @@ pub(crate) mod ffi {
     #[namespace = "orc"]
     unsafe extern "C++" {
         type ColumnVectorBatch = crate::vector::ffi::ColumnVectorBatch;
+        type Type = crate::kind::ffi::Type;
     }
 
     #[namespace = "orc"]
@@ -47,6 +49,8 @@ pub(crate) mod ffi {
         ) -> UniquePtr<Reader>;
 
         fn createRowReader(&self, rowReaderOptions: &RowReaderOptions) -> UniquePtr<RowReader>;
+
+        fn getType(&self) -> &Type;
     }
 
     #[namespace = "orc"]
@@ -56,6 +60,8 @@ pub(crate) mod ffi {
         fn createRowBatch(&self, size: u64) -> UniquePtr<ColumnVectorBatch>;
 
         fn next(self: Pin<&mut RowReader>, data: Pin<&mut ColumnVectorBatch>) -> bool;
+
+        fn getSelectedType(&self) -> &Type;
     }
 }
 
@@ -92,6 +98,11 @@ impl Reader {
     pub fn row_reader(&self, options: RowReaderOptions) -> RowReader {
         RowReader(self.0.createRowReader(&options.0))
     }
+
+    /// Returns the data type of the file being read. This is usually a struct.
+    pub fn kind(&self) -> kind::Kind {
+        kind::Kind::new_from_orc_type(self.0.getType())
+    }
 }
 
 pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);
@@ -113,5 +124,13 @@ impl RowReader {
     /// more stripes.
     pub fn read_into(&mut self, batch: &mut vector::OwnedColumnVectorBatch) -> bool {
         self.0.pin_mut().next(batch.0.pin_mut())
+    }
+
+    /// Returns the data type being read.
+    ///
+    /// With the default [RowReaderOptions], this is the same as [Reader::kind].
+    /// Otherwise this is usually a subset [Reader::kind].
+    pub fn selected_kind(&self) -> kind::Kind {
+        kind::Kind::new_from_orc_type(self.0.getSelectedType())
     }
 }

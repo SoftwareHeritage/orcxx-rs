@@ -1,4 +1,7 @@
+extern crate pretty_assertions;
 extern crate orcxx;
+
+use pretty_assertions::assert_eq;
 
 use orcxx::*;
 
@@ -14,7 +17,38 @@ fn read_file() {
         .expect("Could not read");
     let reader = reader::Reader::new(input_stream);
 
+    let expected_kind = kind::Kind::new(
+        &r#"
+        struct<
+            boolean1:boolean,
+            byte1:tinyint,
+            short1:smallint,
+            int1:int,
+            long1:bigint,
+            float1:float,
+            double1:double,
+            bytes1:binary,
+            string1:string,
+            middle:struct<
+                list:array<
+                    struct<
+                        int1:int,
+                        string1:string>>>,
+            list:array<
+                struct<
+                    int1:int,
+                    string1:string>>,
+            map:map<
+                string,
+                struct<
+                    int1:int,
+                    string1:string>>>
+        "#.split_whitespace().collect::<Vec<_>>().join("")).unwrap();
+
+    assert_eq!(reader.kind(), expected_kind, "unexpected file structure");
+
     let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
+    assert_eq!(row_reader.selected_kind(), expected_kind, "row_reader's selected type does not match the reader's type");
 
     let mut batch = row_reader.row_batch(1024);
 
