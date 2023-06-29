@@ -411,7 +411,10 @@ mod tests {
     fn map_kind_from_orc_type() {
         assert_eq!(
             Kind::new("map<string,boolean>"),
-            Ok(Kind::Map { key: Box::new(Kind::String), value: Box::new(Kind::Boolean) })
+            Ok(Kind::Map {
+                key: Box::new(Kind::String),
+                value: Box::new(Kind::Boolean)
+            })
         );
 
         assert!(Kind::new("map<>").is_err());
@@ -421,10 +424,7 @@ mod tests {
 
     #[test]
     fn union_kind_from_orc_type() {
-        assert_eq!(
-            Kind::new("uniontype<>"),
-            Ok(Kind::Union(vec![]))
-        );
+        assert_eq!(Kind::new("uniontype<>"), Ok(Kind::Union(vec![])));
         assert_eq!(
             Kind::new("uniontype<string>"),
             Ok(Kind::Union(vec![Kind::String]))

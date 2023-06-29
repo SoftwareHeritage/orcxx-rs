@@ -133,7 +133,6 @@ impl ColumnVectorBatch for OwnedColumnVectorBatch {
     fn inner(&self) -> &ffi::ColumnVectorBatch {
         &self.0
     }
-
 }
 
 /// A column (or set of column) of a stripe, with values of unknown type.
@@ -148,7 +147,6 @@ impl<'a> ColumnVectorBatch for BorrowedColumnVectorBatch<'a> {
     fn inner(&self) -> &ffi::ColumnVectorBatch {
         self.0
     }
-
 }
 
 /// A specialized [ColumnVectorBatch] whose values are known to be structures.

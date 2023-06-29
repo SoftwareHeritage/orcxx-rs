@@ -1,10 +1,10 @@
-extern crate pretty_assertions;
 extern crate orcxx;
+extern crate pretty_assertions;
 
 use pretty_assertions::assert_eq;
 
-use orcxx::*;
 use orcxx::vector::ColumnVectorBatch;
+use orcxx::*;
 
 #[test]
 fn nonexistent_file() {
@@ -44,12 +44,21 @@ fn read_file() {
                 struct<
                     int1:int,
                     string1:string>>>
-        "#.split_whitespace().collect::<Vec<_>>().join("")).unwrap();
+        "#
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(""),
+    )
+    .unwrap();
 
     assert_eq!(reader.kind(), expected_kind, "unexpected file structure");
 
     let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
-    assert_eq!(row_reader.selected_kind(), expected_kind, "row_reader's selected type does not match the reader's type");
+    assert_eq!(
+        row_reader.selected_kind(),
+        expected_kind,
+        "row_reader's selected type does not match the reader's type"
+    );
 
     let mut batch = row_reader.row_batch(1024);
 
