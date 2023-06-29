@@ -4,6 +4,7 @@ extern crate orcxx;
 use pretty_assertions::assert_eq;
 
 use orcxx::*;
+use orcxx::vector::ColumnVectorBatch;
 
 #[test]
 fn nonexistent_file() {

@@ -103,21 +103,36 @@ pub(crate) mod ffi {
     }
 }
 
+pub trait ColumnVectorBatch {
+    fn inner(&self) -> &ffi::ColumnVectorBatch;
+
+    fn num_elements(&self) -> u64 {
+        ffi::get_numElements(self.inner())
+    }
+
+    fn as_structs(&self) -> OrcResult<StructVectorBatch> {
+        ffi::try_into_StructVectorBatch(self.inner())
+            .map_err(OrcError)
+            .map(StructVectorBatch)
+    }
+
+    fn as_strings<'a>(&'a self) -> OrcResult<StringVectorBatch<'a>> {
+        ffi::try_into_StringVectorBatch(self.inner())
+            .map_err(OrcError)
+            .map(StringVectorBatch)
+    }
+}
+
 /// A column (or set of column) of a stripe, with values of unknown type.
 pub struct OwnedColumnVectorBatch(pub(crate) UniquePtr<ffi::ColumnVectorBatch>);
 
 impl_debug!(OwnedColumnVectorBatch, ffi::ColumnVectorBatch_toString);
 
-impl OwnedColumnVectorBatch {
-    pub fn num_elements(&self) -> u64 {
-        ffi::get_numElements(&self.0)
+impl ColumnVectorBatch for OwnedColumnVectorBatch {
+    fn inner(&self) -> &ffi::ColumnVectorBatch {
+        &self.0
     }
 
-    pub fn as_structs(&self) -> OrcResult<StructVectorBatch> {
-        ffi::try_into_StructVectorBatch(&self.0)
-            .map_err(OrcError)
-            .map(StructVectorBatch)
-    }
 }
 
 /// A column (or set of column) of a stripe, with values of unknown type.
@@ -128,22 +143,11 @@ impl_debug!(
     ffi::ColumnVectorBatch_toString
 );
 
-impl<'a> BorrowedColumnVectorBatch<'a> {
-    pub fn num_elements(&self) -> u64 {
-        ffi::get_numElements(&self.0)
+impl<'a> ColumnVectorBatch for BorrowedColumnVectorBatch<'a> {
+    fn inner(&self) -> &ffi::ColumnVectorBatch {
+        self.0
     }
 
-    pub fn as_structs(&self) -> OrcResult<StructVectorBatch<'a>> {
-        ffi::try_into_StructVectorBatch(&self.0)
-            .map_err(OrcError)
-            .map(StructVectorBatch)
-    }
-
-    pub fn as_strings(&self) -> OrcResult<StringVectorBatch<'a>> {
-        ffi::try_into_StringVectorBatch(&self.0)
-            .map_err(OrcError)
-            .map(StringVectorBatch)
-    }
 }
 
 /// A specialized [ColumnVectorBatch] whose values are known to be structures.
