@@ -77,13 +77,6 @@ pub(crate) mod ffi {
     }
 }
 
-/// A field of an ORC struct
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Field {
-    pub name: String,
-    pub kind: Kind,
-}
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Kind {
     Boolean,
@@ -101,7 +94,7 @@ pub enum Kind {
         key: Box<Kind>,
         value: Box<Kind>,
     },
-    Struct(Vec<Field>),
+    Struct(Vec<(String, Kind)>),
     Union(Vec<Kind>),
     /// Infinite-precision number.
     ///
@@ -186,12 +179,12 @@ impl Kind {
                         // Safe because i < subtypeCount
                         let sub_type = unsafe { &*sub_type };
 
-                        Field {
+                        (
                             // FIXME: we should probably return an Error on non-UTF8
                             // instead of using to_string_lossy
-                            name: field_name.to_string_lossy().to_string(),
-                            kind: Kind::new_from_orc_type(sub_type),
-                        }
+                            field_name.to_string_lossy().to_string(),
+                            Kind::new_from_orc_type(sub_type),
+                        )
                     })
                     .collect(),
             ),
@@ -319,56 +312,29 @@ mod tests {
         assert_eq!(Kind::new("struct<>"), Ok(Kind::Struct(vec![])));
         assert_eq!(
             Kind::new("struct<a:boolean>"),
-            Ok(Kind::Struct(vec![Field {
-                name: "a".to_owned(),
-                kind: Kind::Boolean
-            }]))
+            Ok(Kind::Struct(vec![("a".to_owned(), Kind::Boolean)]))
         );
         assert_eq!(
             Kind::new("struct<a:boolean,b:smallint,c:int,d:bigint>"),
             Ok(Kind::Struct(vec![
-                Field {
-                    name: "a".to_owned(),
-                    kind: Kind::Boolean
-                },
-                Field {
-                    name: "b".to_owned(),
-                    kind: Kind::Short
-                },
-                Field {
-                    name: "c".to_owned(),
-                    kind: Kind::Int
-                },
-                Field {
-                    name: "d".to_owned(),
-                    kind: Kind::Long
-                }
+                ("a".to_owned(), Kind::Boolean),
+                ("b".to_owned(), Kind::Short),
+                ("c".to_owned(), Kind::Int),
+                ("d".to_owned(), Kind::Long)
             ]))
         );
         assert_eq!(
             Kind::new("struct<a:boolean,b:struct<b1:smallint,b2:int>,c:bigint>"),
             Ok(Kind::Struct(vec![
-                Field {
-                    name: "a".to_owned(),
-                    kind: Kind::Boolean
-                },
-                Field {
-                    name: "b".to_owned(),
-                    kind: Kind::Struct(vec![
-                        Field {
-                            name: "b1".to_owned(),
-                            kind: Kind::Short
-                        },
-                        Field {
-                            name: "b2".to_owned(),
-                            kind: Kind::Int
-                        }
+                ("a".to_owned(), Kind::Boolean),
+                (
+                    "b".to_owned(),
+                    Kind::Struct(vec![
+                        ("b1".to_owned(), Kind::Short),
+                        ("b2".to_owned(), Kind::Int)
                     ])
-                },
-                Field {
-                    name: "c".to_owned(),
-                    kind: Kind::Long
-                }
+                ),
+                ("c".to_owned(), Kind::Long)
             ]))
         );
 
@@ -384,22 +350,10 @@ mod tests {
         assert_eq!(
             Kind::new("array<struct<a:boolean,b:smallint,c:int,d:bigint>>"),
             Ok(Kind::List(Box::new(Kind::Struct(vec![
-                Field {
-                    name: "a".to_owned(),
-                    kind: Kind::Boolean
-                },
-                Field {
-                    name: "b".to_owned(),
-                    kind: Kind::Short
-                },
-                Field {
-                    name: "c".to_owned(),
-                    kind: Kind::Int
-                },
-                Field {
-                    name: "d".to_owned(),
-                    kind: Kind::Long
-                }
+                ("a".to_owned(), Kind::Boolean),
+                ("b".to_owned(), Kind::Short),
+                ("c".to_owned(), Kind::Int),
+                ("d".to_owned(), Kind::Long)
             ]))))
         );
 
