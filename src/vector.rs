@@ -103,6 +103,7 @@ pub(crate) mod ffi {
     }
 }
 
+/// Common methods of [OwnedColumnVectorBatch] and [BorrowedColumnVectorBatch]
 pub trait ColumnVectorBatch {
     fn inner(&self) -> &ffi::ColumnVectorBatch;
 
