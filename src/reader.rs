@@ -3,6 +3,8 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
+//! Low-level parser for ORC files.
+
 use cxx::{let_cxx_string, UniquePtr};
 
 use kind;

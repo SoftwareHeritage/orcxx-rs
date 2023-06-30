@@ -68,6 +68,7 @@ namespace orcxx_rs {
 
     typedef orc::DataBuffer<char*> StringDataBuffer;
     typedef orc::DataBuffer<int64_t> Int64DataBuffer;
+    typedef orc::DataBuffer<double> DoubleDataBuffer;
     typedef orc::ColumnVectorBatch* ColumnVectorBatchPtr;
 }
 

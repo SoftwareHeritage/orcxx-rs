@@ -18,6 +18,13 @@ pub(crate) mod ffi {
 
     #[namespace = "orcxx_rs"]
     unsafe extern "C++" {
+        type DoubleDataBuffer;
+
+        fn data(&self) -> *const f64;
+    }
+
+    #[namespace = "orcxx_rs"]
+    unsafe extern "C++" {
         type StringDataBuffer;
 
         fn data(&self) -> *const *mut c_char;
