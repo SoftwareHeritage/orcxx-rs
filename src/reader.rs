@@ -65,6 +65,7 @@ pub(crate) mod ffi {
     }
 }
 
+/// Options passed to [Reader::new]
 pub struct ReaderOptions(UniquePtr<ffi::ReaderOptions>);
 
 impl Default for ReaderOptions {
@@ -73,6 +74,7 @@ impl Default for ReaderOptions {
     }
 }
 
+/// Input for [Reader::new]
 pub struct InputStream(UniquePtr<ffi::InputStream>);
 
 impl InputStream {
@@ -84,6 +86,7 @@ impl InputStream {
     }
 }
 
+/// Reads ORC file meta-data and constructs [RowReader].
 pub struct Reader(UniquePtr<ffi::Reader>);
 
 impl Reader {
@@ -105,6 +108,7 @@ impl Reader {
     }
 }
 
+/// Options passed to [Reader::row_reader]
 pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);
 
 impl Default for RowReaderOptions {
@@ -113,9 +117,13 @@ impl Default for RowReaderOptions {
     }
 }
 
+/// Reads rows from ORC files to a raw [vector::OwnedColumnVectorBatch]
 pub struct RowReader(UniquePtr<ffi::RowReader>);
 
 impl RowReader {
+    /// Creates a vector batch, to be passed to [RowReader::read_into]
+    ///
+    /// ``size`` is the number of rows to read at once.
     pub fn row_batch(&mut self, size: u64) -> vector::OwnedColumnVectorBatch {
         vector::OwnedColumnVectorBatch(self.0.createRowBatch(size))
     }

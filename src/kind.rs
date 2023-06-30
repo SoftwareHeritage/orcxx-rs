@@ -3,12 +3,12 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-/// Contains structures to represent ORC types.
-///
-/// See https://orc.apache.org/docs/types.html for details.
-///
-/// This module and its structures are named "kind" instead of "type" in order to
-/// avoid clashes with the Rust keyword.
+//! Contains structures to represent ORC types.
+//!
+//! See <https://orc.apache.org/docs/types.html> for details.
+//!
+//! This module and its structures are named "kind" instead of "type" in order to
+//! avoid clashes with the Rust keyword.
 use cxx::let_cxx_string;
 
 use utils::OrcResult;
@@ -99,7 +99,7 @@ pub enum Kind {
     /// Infinite-precision number.
     ///
     /// Actually limited to u32 length in ORCv1:
-    /// https://orc.apache.org/specification/ORCv1/#type-information
+    /// <https://orc.apache.org/specification/ORCv1/#type-information>
     Decimal {
         precision: u64,
         scale: u64,
@@ -108,12 +108,12 @@ pub enum Kind {
     /// Variable-length character string.
     ///
     /// Actually limited to u32 length in ORCv1:
-    /// https://orc.apache.org/specification/ORCv1/#type-information
+    /// <https://orc.apache.org/specification/ORCv1/#type-information>
     Varchar(u64),
     /// Fixed-length character string.
     ///
     /// Actually limited to u32 length in ORCv1:
-    /// https://orc.apache.org/specification/ORCv1/#type-information
+    /// <https://orc.apache.org/specification/ORCv1/#type-information>
     Char(u64),
     TimestampInstant,
 }
