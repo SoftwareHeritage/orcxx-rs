@@ -67,3 +67,8 @@ pub mod reader;
 pub mod structured_reader;
 pub mod utils;
 pub mod vector;
+
+#[cfg(feature = "json")]
+extern crate json;
+#[cfg(feature = "json")]
+pub mod to_json;
