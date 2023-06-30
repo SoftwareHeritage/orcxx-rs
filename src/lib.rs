@@ -34,11 +34,11 @@
 //! while row_reader.read_into(&mut batch) {
 //!     total_elements += batch.num_elements();
 //!
-//!     let struct_vector = batch.as_structs().unwrap();
+//!     let struct_vector = batch.borrow().try_into_structs().unwrap();
 //!     let vectors = struct_vector.fields();
 //!
 //!     for vector in vectors {
-//!         match vector.as_strings() {
+//!         match vector.try_into_strings() {
 //!             Ok(string_vector) => {
 //!                 for s in string_vector.iter() {
 //!                     all_strings.push(std::str::from_utf8(s).unwrap().to_owned())
