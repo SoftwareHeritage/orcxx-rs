@@ -62,6 +62,7 @@ pub(crate) mod ffi {
         type StringVectorBatch;
         type StructVectorBatch;
         type ListVectorBatch;
+        type MapVectorBatch;
     }
 
     impl UniquePtr<ColumnVectorBatch> {}
@@ -98,6 +99,13 @@ pub(crate) mod ffi {
         fn get_elements(vectorBatch: &ListVectorBatch) -> &UniquePtr<ColumnVectorBatch>;
         #[rust_name = "ListVectorBatch_get_offsets"]
         fn get_offsets(vectorBatch: &ListVectorBatch) -> &Int64DataBuffer;
+
+        #[rust_name = "MapVectorBatch_get_keys"]
+        fn get_keys(vectorBatch: &MapVectorBatch) -> &UniquePtr<ColumnVectorBatch>;
+        #[rust_name = "MapVectorBatch_get_elements"]
+        fn get_elements(vectorBatch: &MapVectorBatch) -> &UniquePtr<ColumnVectorBatch>;
+        #[rust_name = "MapVectorBatch_get_offsets"]
+        fn get_offsets(vectorBatch: &MapVectorBatch) -> &Int64DataBuffer;
     }
 
     #[namespace = "orcxx_rs::utils"]
@@ -112,6 +120,8 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&StructVectorBatch>;
         #[rust_name = "try_into_ListVectorBatch"]
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&ListVectorBatch>;
+        #[rust_name = "try_into_MapVectorBatch"]
+        fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&MapVectorBatch>;
 
         #[rust_name = "LongVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &LongVectorBatch) -> &ColumnVectorBatch;
@@ -121,6 +131,8 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &StringVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "ListVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &ListVectorBatch) -> &ColumnVectorBatch;
+        #[rust_name = "MapVectorBatch_into_ColumnVectorBatch"]
+        fn try_into(vectorBatch: &MapVectorBatch) -> &ColumnVectorBatch;
 
         #[rust_name = "ColumnVectorBatch_toString"]
         fn toString(type_: &ColumnVectorBatch) -> UniquePtr<CxxString>;
@@ -134,6 +146,8 @@ pub(crate) mod ffi {
         fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "ListVectorBatch_toString"]
         fn toString(type_: &ListVectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "MapVectorBatch_toString"]
+        fn toString(type_: &MapVectorBatch) -> UniquePtr<CxxString>;
     }
 }
 
@@ -206,6 +220,12 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
         ffi::try_into_ListVectorBatch(self.0)
             .map_err(OrcError)
             .map(ListVectorBatch)
+    }
+
+    pub fn try_into_maps(self) -> OrcResult<MapVectorBatch<'a>> {
+        ffi::try_into_MapVectorBatch(self.0)
+            .map_err(OrcError)
+            .map(MapVectorBatch)
     }
 }
 
@@ -415,7 +435,39 @@ impl<'a> ListVectorBatch<'a> {
         let buffer = ffi::ListVectorBatch_get_offsets(self.0).data();
         let num_elements =
             ffi::get_numElements(ffi::ListVectorBatch_into_ColumnVectorBatch(&self.0))
-            .try_into().expect("could not convert u64 to usize");
+                .try_into()
+                .expect("could not convert u64 to usize");
+
+        // Safe because num_elements is exactly the number of elements in the buffer
+        unsafe { std::slice::from_raw_parts(buffer, num_elements) }
+    }
+}
+
+/// A specialized [ColumnVectorBatch] whose values are lists of other values
+///
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_maps`]
+pub struct MapVectorBatch<'a>(&'a ffi::MapVectorBatch);
+
+impl_debug!(MapVectorBatch<'a>, ffi::MapVectorBatch_toString);
+
+impl<'a> MapVectorBatch<'a> {
+    /// The flat vector of all keys of all maps
+    pub fn keys(&self) -> BorrowedColumnVectorBatch<'a> {
+        BorrowedColumnVectorBatch(ffi::MapVectorBatch_get_keys(self.0))
+    }
+
+    /// The flat vector of all values of all maps
+    pub fn elements(&self) -> BorrowedColumnVectorBatch<'a> {
+        BorrowedColumnVectorBatch(ffi::MapVectorBatch_get_elements(self.0))
+    }
+
+    /// Offset of each ist in the flat vector
+    pub fn offsets(&self) -> &'a [i64] {
+        let buffer = ffi::MapVectorBatch_get_offsets(self.0).data();
+        let num_elements =
+            ffi::get_numElements(ffi::MapVectorBatch_into_ColumnVectorBatch(&self.0))
+                .try_into()
+                .expect("could not convert u64 to usize");
 
         // Safe because num_elements is exactly the number of elements in the buffer
         unsafe { std::slice::from_raw_parts(buffer, num_elements) }

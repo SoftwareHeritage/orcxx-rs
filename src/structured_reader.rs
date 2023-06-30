@@ -67,18 +67,31 @@ pub enum ColumnTree<'a> {
     String(vector::StringVectorBatch<'a>),
     Binary(vector::StringVectorBatch<'a>),
     Timestamp, // TODO
-    /// A vector of lists
+    /// A column of lists
     ///
     /// The offsets are such that the first list is elements `offsets[0]` (inclusive) to
     /// `offsets[1]` (exclusive), the second list is elements `offsets[1]` (inclusive)
-    /// to `offsets[2]` (exclusive), etc.
+    /// to `offsets[2]` (exclusive), etc. and the last list is elements
+    /// `offsets[offsets.len()-1]` to the end
     ///
-    /// Therefore, offsets.len() is exactly the number of lists plus one.
+    /// Therefore, offsets.len() is exactly the number of lists.
     List {
         offsets: &'a [i64],
         elements: Box<ColumnTree<'a>>,
     },
-    Map, // TODO
+    /// A column of maps
+    ///
+    /// The offsets are such that the first list is entries `offsets[0]` (inclusive) to
+    /// `offsets[1]` (exclusive), the second list is entries `offsets[1]` (inclusive)
+    /// to `offsets[2]` (exclusive), etc. and the last list is entries
+    /// `offsets[offsets.len()-1]` to the end
+    ///
+    /// Therefore, offsets.len() is exactly the number of maps.
+    Map {
+        offsets: &'a [i64],
+        keys: Box<ColumnTree<'a>>,
+        elements: Box<ColumnTree<'a>>,
+    },
     /// Pairs of (field_name, column_tree)
     Struct(Vec<(String, ColumnTree<'a>)>),
     Union,            // TODO
@@ -152,7 +165,22 @@ fn columnvectorbatch_to_columntree<'a>(
                 )),
             }
         }
-        Kind::Map { key, value } => ColumnTree::Map, // TODO
+        Kind::Map { key, value } => {
+            let maps_vector_batch = vector_batch
+                .try_into_maps()
+                .expect("Failed to cast maps vector_batch");
+            ColumnTree::Map {
+                offsets: maps_vector_batch.offsets(),
+                keys: Box::new(columnvectorbatch_to_columntree(
+                    maps_vector_batch.keys(),
+                    key,
+                )),
+                elements: Box::new(columnvectorbatch_to_columntree(
+                    maps_vector_batch.elements(),
+                    value,
+                )),
+            }
+        }
         Kind::Struct(subtypes) => ColumnTree::Struct(
             vector_batch
                 .try_into_structs()

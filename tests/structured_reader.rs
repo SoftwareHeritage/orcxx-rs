@@ -72,22 +72,44 @@ fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
 
             let mut offsets_it = offsets.into_iter();
             let mut next_split = offsets_it.next().map(|&offset| offset as usize);
+            println!("list offset {:?}", next_split);
             for (i, value) in values.into_iter().enumerate() {
-                match next_split {
-                    Some(next_split2) => {
-                        if i == next_split2 {
-                            arrays.push(Vec::new());
-                            next_split = offsets_it.next().map(|&offset| offset as usize);
-                        }
-                    }
-                    None => {},  // Already found the last split, continue until end
+                while Some(i) == next_split {
+                    next_split = offsets_it.next().map(|&offset| offset as usize);
+                    println!("list offset {:?}", next_split);
+                    arrays.push(Vec::new());
                 }
                 arrays.last_mut().unwrap().push(value);
             }
 
             arrays.into_iter().map(JsonValue::Array).collect()
         }
-        ColumnTree::Map => Vec::new(), // TODO
+        ColumnTree::Map {
+            offsets,
+            keys,
+            elements,
+        } => {
+            let keys = columntree_to_json_rows(keys);
+            let values = columntree_to_json_rows(elements);
+            let mut maps: Vec<_> = Vec::with_capacity(offsets.len() - 1);
+
+            let mut offsets_it = offsets.into_iter();
+            let mut next_split = offsets_it.next().map(|&offset| offset as usize);
+            println!("map offset {:?}", next_split);
+            for (i, (key, value)) in iter::zip(keys.into_iter(), values.into_iter()).enumerate() {
+                while Some(i) == next_split {
+                    next_split = offsets_it.next().map(|&offset| offset as usize);
+                    println!("map offset {:?}", next_split);
+                    maps.push(Vec::new());
+                }
+                let mut object = json::object::Object::with_capacity(2);
+                object.insert("key", key);
+                object.insert("value", value);
+                maps.last_mut().unwrap().push(JsonValue::Object(object));
+            }
+
+            maps.into_iter().map(JsonValue::Array).collect()
+        }
         _ => todo!("{:?}", tree),
     }
 }
