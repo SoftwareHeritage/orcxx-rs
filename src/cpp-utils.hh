@@ -64,6 +64,8 @@ namespace orcxx_rs {
         getter(length);
         getter(data);
         getter(fields);
+        getter(elements);
+        getter(offsets);
     }
 
     typedef orc::DataBuffer<char*> StringDataBuffer;

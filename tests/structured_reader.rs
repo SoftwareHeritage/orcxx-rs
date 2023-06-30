@@ -66,8 +66,28 @@ fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
             }
             objects.into_iter().map(JsonValue::Object).collect()
         }
-        ColumnTree::List => Vec::new(), // TODO
-        ColumnTree::Map => Vec::new(),  // TODO
+        ColumnTree::List { offsets, elements } => {
+            let values = columntree_to_json_rows(elements);
+            let mut arrays: Vec<Vec<_>> = Vec::with_capacity(offsets.len() - 1);
+
+            let mut offsets_it = offsets.into_iter();
+            let mut next_split = offsets_it.next().map(|&offset| offset as usize);
+            for (i, value) in values.into_iter().enumerate() {
+                match next_split {
+                    Some(next_split2) => {
+                        if i == next_split2 {
+                            arrays.push(Vec::new());
+                            next_split = offsets_it.next().map(|&offset| offset as usize);
+                        }
+                    }
+                    None => {},  // Already found the last split, continue until end
+                }
+                arrays.last_mut().unwrap().push(value);
+            }
+
+            arrays.into_iter().map(JsonValue::Array).collect()
+        }
+        ColumnTree::Map => Vec::new(), // TODO
         _ => todo!("{:?}", tree),
     }
 }
