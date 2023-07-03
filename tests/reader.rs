@@ -5,23 +5,49 @@
 
 extern crate orcxx;
 extern crate pretty_assertions;
+extern crate tempfile;
+
+use std::io::Write;
 
 use pretty_assertions::assert_eq;
 
 use orcxx::vector::ColumnVectorBatch;
 use orcxx::*;
 
+/// Asserts opening a non-existing file returns an Error
 #[test]
 fn nonexistent_file() {
     let stream_res = reader::InputStream::from_local_file("orc/examples/nonexistent.orc");
     assert!(matches!(stream_res, Err(utils::OrcError(_))));
 }
 
+/// Asserts reading an empty file returns an Error
+#[test]
+fn empty_file() {
+    let temp_file = tempfile::NamedTempFile::new().unwrap();
+    let stream_res = reader::InputStream::from_local_file(&temp_file.path().display().to_string())
+        .expect("could not open local file");
+    let reader = reader::Reader::new(stream_res);
+    assert!(matches!(reader, Err(utils::OrcError(_))))
+}
+
+/// Asserts reading gibberish returns an Error
+#[test]
+fn nonorc_file() {
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    temp_file.write(br#"{"foo": "bar"}"#).unwrap();
+    temp_file.flush().unwrap();
+    let stream_res = reader::InputStream::from_local_file(&temp_file.path().display().to_string())
+        .expect("could not open local file");
+    let reader = reader::Reader::new(stream_res);
+    assert!(matches!(reader, Err(utils::OrcError(_))))
+}
+
 #[test]
 fn read_file() {
     let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
         .expect("Could not read");
-    let reader = reader::Reader::new(input_stream);
+    let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let expected_kind = kind::Kind::new(
         &r#"

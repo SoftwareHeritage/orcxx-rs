@@ -22,8 +22,8 @@ use orcxx::*;
 #[test]
 fn read_file() {
     let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
-        .expect("Could not read .orc");
-    let reader = reader::Reader::new(input_stream);
+        .expect("Could not open .orc");
+    let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
     let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
 

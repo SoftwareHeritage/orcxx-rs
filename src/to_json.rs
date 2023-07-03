@@ -3,12 +3,11 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-
 use std::iter;
 
 use json::JsonValue;
 
-use structured_reader::{ColumnTree, StructuredRowReader};
+use structured_reader::ColumnTree;
 
 pub fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
     match tree {

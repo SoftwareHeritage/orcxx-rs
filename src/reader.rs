@@ -48,7 +48,7 @@ pub(crate) mod ffi {
         fn createReader(
             inStream: UniquePtr<InputStream>,
             options: &ReaderOptions,
-        ) -> UniquePtr<Reader>;
+        ) -> Result<UniquePtr<Reader>>;
 
         fn createRowReader(&self, rowReaderOptions: &RowReaderOptions) -> UniquePtr<RowReader>;
 
@@ -92,12 +92,17 @@ impl InputStream {
 pub struct Reader(UniquePtr<ffi::Reader>);
 
 impl Reader {
-    pub fn new(input_stream: InputStream) -> Reader {
+    pub fn new(input_stream: InputStream) -> OrcResult<Reader> {
         Reader::new_with_options(input_stream, ReaderOptions::default())
     }
 
-    pub fn new_with_options(input_stream: InputStream, options: ReaderOptions) -> Reader {
-        Reader(ffi::createReader(input_stream.0, &*options.0))
+    pub fn new_with_options(
+        input_stream: InputStream,
+        options: ReaderOptions,
+    ) -> OrcResult<Reader> {
+        ffi::createReader(input_stream.0, &*options.0)
+            .map_err(OrcError)
+            .map(Reader)
     }
 
     pub fn row_reader(&self, options: RowReaderOptions) -> RowReader {
