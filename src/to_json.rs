@@ -62,11 +62,9 @@ pub fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
 
             let mut offsets_it = offsets.into_iter();
             let mut next_split = offsets_it.next().map(|&offset| offset as usize);
-            println!("list offset {:?}", next_split);
             for (i, value) in values.into_iter().enumerate() {
                 while Some(i) == next_split {
                     next_split = offsets_it.next().map(|&offset| offset as usize);
-                    println!("list offset {:?}", next_split);
                     arrays.push(Vec::new());
                 }
                 arrays.last_mut().unwrap().push(value);
@@ -85,11 +83,9 @@ pub fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
 
             let mut offsets_it = offsets.into_iter();
             let mut next_split = offsets_it.next().map(|&offset| offset as usize);
-            println!("map offset {:?}", next_split);
             for (i, (key, value)) in iter::zip(keys.into_iter(), values.into_iter()).enumerate() {
                 while Some(i) == next_split {
                     next_split = offsets_it.next().map(|&offset| offset as usize);
-                    println!("map offset {:?}", next_split);
                     maps.push(Vec::new());
                 }
                 let mut object = json::object::Object::with_capacity(2);
@@ -103,4 +99,3 @@ pub fn columntree_to_json_rows<'a>(tree: &ColumnTree<'a>) -> Vec<JsonValue> {
         _ => todo!("{:?}", tree),
     }
 }
-
