@@ -3,8 +3,9 @@ use std::fs;
 use std::path::Path;
 use std::process;
 
-const BRIDGE_MODULES: [&str; 4] = [
+const BRIDGE_MODULES: [&str; 5] = [
     "src/kind.rs",
+    "src/int128.rs",
     "src/reader.rs",
     "src/memorypool.rs",
     "src/vector.rs",

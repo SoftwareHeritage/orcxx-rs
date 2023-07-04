@@ -22,12 +22,13 @@ build = "build.rs"
 
 [features]
 # Defines a 'to_json' module which allows converting ORC files to JSON objects
-json = ["dep:json", "chrono"]
+json = ["dep:json", "dep:chrono"]
 
 [dependencies]
 cxx = "1.0"
 json = { version = "0.12.4", optional = true }
-chrono= { version = "0.4.26", optional = true }
+chrono = { version = "0.4.26", optional = true }
+rust_decimal = "1.30.0"
 
 [build-dependencies]
 cxx-build = "1.0"

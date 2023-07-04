@@ -107,8 +107,8 @@ pub enum ColumnTree<'a> {
         num_elements: u64, // TODO: deduplicate this with the not_null slice size?
         elements: Vec<(String, ColumnTree<'a>)>,
     },
-    Union,            // TODO
-    Decimal,          // TODO
+    Decimal64(vector::Decimal64VectorBatch<'a>),
+    Decimal128(vector::Decimal128VectorBatch<'a>),
     Varchar,          // TODO
     Char,             // TODO
     TimestampInstant, // TODO
@@ -225,10 +225,17 @@ fn columnvectorbatch_to_columntree<'a>(
                 elements,
             }
         }
-        Kind::Union(subtypes) => ColumnTree::Union, // TODO
-        Kind::Decimal { precision, scale } => ColumnTree::Decimal, // TODO
-        Kind::Varchar(_) => ColumnTree::Varchar,    // TODO
-        Kind::Char(_) => ColumnTree::Char,          // TODO
+        Kind::Union(_) => todo!("Union types"),
+        Kind::Decimal { .. } => match vector_batch.try_into_decimals64() {
+            Ok(vector_batch) => ColumnTree::Decimal64(vector_batch),
+            Err(_) => ColumnTree::Decimal128(
+                vector_batch
+                    .try_into_decimals128()
+                    .expect("Failed to cast decimal vector_batch"),
+            ),
+        },
+        Kind::Varchar(_) => ColumnTree::Varchar, // TODO
+        Kind::Char(_) => ColumnTree::Char,       // TODO
         Kind::TimestampInstant => ColumnTree::TimestampInstant, // TODO
     }
 }

@@ -7,8 +7,10 @@ use std::convert::TryInto;
 use std::iter;
 
 use json::JsonValue;
+use rust_decimal::prelude::ToPrimitive;
 
 use structured_reader::ColumnTree;
+use vector::DecimalVectorBatch;
 
 fn map_nullable_json_values<V, C: Iterator<Item = Option<V>>, F>(column: C, f: F) -> Vec<JsonValue>
 where
@@ -77,6 +79,20 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
                 .format("%Y-%m-%d")
                 .to_string();
             JsonValue::String(s)
+        }),
+        ColumnTree::Decimal64(column) => map_nullable_json_values(column.iter(), |n| {
+            JsonValue::Number(
+                n.to_f64()
+                    .expect("Decimal cannot be represented with f64")
+                    .into(),
+            )
+        }),
+        ColumnTree::Decimal128(column) => map_nullable_json_values(column.iter(), |n| {
+            JsonValue::Number(
+                n.to_f64()
+                    .expect("Decimal cannot be represented with f64")
+                    .into(),
+            )
         }),
         ColumnTree::Binary(column) => map_nullable_json_values(column.iter(), |s| {
             JsonValue::Array(

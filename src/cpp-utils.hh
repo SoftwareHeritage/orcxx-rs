@@ -1,5 +1,6 @@
 #include <memory>
 
+#include <orc/Int128.hh>
 #include <orc/MemoryPool.hh>
 #include <orc/Type.hh>
 #include <orc/Vector.hh>
@@ -68,6 +69,9 @@ namespace orcxx_rs {
         getter(elements);
         getter(offsets);
         getter(nanoseconds);
+        getter(values);
+        getter(precision);
+        getter(scale);
         getter(hasNulls);
         getter(notNull);
     }
@@ -75,6 +79,7 @@ namespace orcxx_rs {
     typedef orc::DataBuffer<char> CharDataBuffer;
     typedef orc::DataBuffer<char*> StringDataBuffer;
     typedef orc::DataBuffer<int64_t> Int64DataBuffer;
+    typedef orc::DataBuffer<orc::Int128> Int128DataBuffer;
     typedef orc::DataBuffer<double> DoubleDataBuffer;
     typedef orc::ColumnVectorBatch* ColumnVectorBatchPtr;
 }

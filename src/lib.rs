@@ -61,6 +61,7 @@
 
 extern crate cxx;
 
+mod int128;
 pub mod kind;
 mod memorypool;
 pub mod reader;
@@ -72,5 +73,6 @@ pub mod vector;
 extern crate chrono;
 #[cfg(feature = "json")]
 extern crate json;
+extern crate rust_decimal;
 #[cfg(feature = "json")]
 pub mod to_json;

@@ -12,6 +12,7 @@ use std::os::raw::c_char;
 use std::ptr;
 
 use cxx::UniquePtr;
+use rust_decimal::Decimal;
 
 use memorypool;
 use utils::{OrcError, OrcResult};
@@ -49,6 +50,7 @@ pub(crate) mod ffi {
     #[namespace = "orcxx_rs"]
     unsafe extern "C++" {
         type Int64DataBuffer = crate::memorypool::ffi::Int64DataBuffer;
+        type Int128DataBuffer = crate::memorypool::ffi::Int128DataBuffer;
         type DoubleDataBuffer = crate::memorypool::ffi::DoubleDataBuffer;
         type StringDataBuffer = crate::memorypool::ffi::StringDataBuffer;
         type CharDataBuffer = crate::memorypool::ffi::CharDataBuffer;
@@ -64,6 +66,8 @@ pub(crate) mod ffi {
         type DoubleVectorBatch;
         type StringVectorBatch;
         type TimestampVectorBatch;
+        type Decimal64VectorBatch;
+        type Decimal128VectorBatch;
         type StructVectorBatch;
         type ListVectorBatch;
         type MapVectorBatch;
@@ -103,6 +107,20 @@ pub(crate) mod ffi {
         #[rust_name = "TimestampVectorBatch_get_nanoseconds"]
         fn get_nanoseconds(vectorBatch: &TimestampVectorBatch) -> &Int64DataBuffer;
 
+        #[rust_name = "Decimal64VectorBatch_get_values"]
+        fn get_values(vectorBatch: &Decimal64VectorBatch) -> &Int64DataBuffer;
+        #[rust_name = "Decimal64VectorBatch_get_precision"]
+        fn get_precision(vectorBatch: &Decimal64VectorBatch) -> i32;
+        #[rust_name = "Decimal64VectorBatch_get_scale"]
+        fn get_scale(vectorBatch: &Decimal64VectorBatch) -> i32;
+
+        #[rust_name = "Decimal128VectorBatch_get_values"]
+        fn get_values(vectorBatch: &Decimal128VectorBatch) -> &Int128DataBuffer;
+        #[rust_name = "Decimal128VectorBatch_get_precision"]
+        fn get_precision(vectorBatch: &Decimal128VectorBatch) -> i32;
+        #[rust_name = "Decimal128VectorBatch_get_scale"]
+        fn get_scale(vectorBatch: &Decimal128VectorBatch) -> i32;
+
         #[rust_name = "StructVectorBatch_get_fields"]
         fn get_fields(vectorBatch: &StructVectorBatch) -> &CxxVector<ColumnVectorBatchPtr>;
 
@@ -129,6 +147,10 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&StringVectorBatch>;
         #[rust_name = "try_into_TimestampVectorBatch"]
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&TimestampVectorBatch>;
+        #[rust_name = "try_into_Decimal64VectorBatch"]
+        fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&Decimal64VectorBatch>;
+        #[rust_name = "try_into_Decimal128VectorBatch"]
+        fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&Decimal128VectorBatch>;
         #[rust_name = "try_into_StructVectorBatch"]
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&StructVectorBatch>;
         #[rust_name = "try_into_ListVectorBatch"]
@@ -144,6 +166,10 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &StringVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "TimestampVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &TimestampVectorBatch) -> &ColumnVectorBatch;
+        #[rust_name = "Decimal64VectorBatch_into_ColumnVectorBatch"]
+        fn try_into(vectorBatch: &Decimal64VectorBatch) -> &ColumnVectorBatch;
+        #[rust_name = "Decimal128VectorBatch_into_ColumnVectorBatch"]
+        fn try_into(vectorBatch: &Decimal128VectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "ListVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &ListVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "MapVectorBatch_into_ColumnVectorBatch"]
@@ -159,6 +185,10 @@ pub(crate) mod ffi {
         fn toString(type_: &StringVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "TimestampVectorBatch_toString"]
         fn toString(type_: &TimestampVectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "Decimal64VectorBatch_toString"]
+        fn toString(type_: &Decimal64VectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "Decimal128VectorBatch_toString"]
+        fn toString(type_: &Decimal128VectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "StructVectorBatch_toString"]
         fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "ListVectorBatch_toString"]
@@ -263,6 +293,18 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
         ffi::try_into_TimestampVectorBatch(self.0)
             .map_err(OrcError)
             .map(TimestampVectorBatch)
+    }
+
+    pub fn try_into_decimals64(&self) -> OrcResult<Decimal64VectorBatch<'a>> {
+        ffi::try_into_Decimal64VectorBatch(self.0)
+            .map_err(OrcError)
+            .map(Decimal64VectorBatch)
+    }
+
+    pub fn try_into_decimals128(&self) -> OrcResult<Decimal128VectorBatch<'a>> {
+        ffi::try_into_Decimal128VectorBatch(self.0)
+            .map_err(OrcError)
+            .map(Decimal128VectorBatch)
     }
 
     pub fn try_into_structs(&self) -> OrcResult<StructVectorBatch<'a>> {
@@ -604,6 +646,198 @@ impl<'a> Iterator for TimestampVectorBatchIterator<'a> {
         self.index += 1;
 
         Some(Some((datum, nanoseconds)))
+    }
+}
+
+/// Common trait for [Decimal64VectorBatch] and [Decimal128VectorBatch]
+pub trait DecimalVectorBatch<'a> {
+    type IteratorType: Iterator<Item = Option<Decimal>>;
+
+    /// total number of digits
+    fn precision(&self) -> i32;
+    /// the number of places after the decimal
+    fn scale(&self) -> i32;
+    fn iter(&self) -> Self::IteratorType;
+}
+
+/// A specialized [ColumnVectorBatch] whose values are known to be 64-bits decimal numbers
+///
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
+pub struct Decimal64VectorBatch<'a>(&'a ffi::Decimal64VectorBatch);
+
+impl_debug!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_toString);
+
+impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
+    type IteratorType = Decimal64VectorBatchIterator<'a>;
+
+    fn precision(&self) -> i32 {
+        ffi::Decimal64VectorBatch_get_precision(self.0)
+    }
+
+    fn scale(&self) -> i32 {
+        ffi::Decimal64VectorBatch_get_scale(self.0)
+    }
+
+    fn iter(&self) -> Decimal64VectorBatchIterator<'a> {
+        let data = ffi::Decimal64VectorBatch_get_values(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::Decimal64VectorBatch_into_ColumnVectorBatch(&self.0));
+        let num_elements = vector_batch.num_elements();
+        let not_null = vector_batch.not_null_ptr();
+
+        Decimal64VectorBatchIterator {
+            batch: PhantomData,
+            data_index: 0,
+            not_null_index: 0,
+            data,
+            not_null,
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+            scale: self
+                .scale()
+                .try_into()
+                .expect("Could not convert scale from i32 to u43"),
+        }
+    }
+}
+
+/// Iterator on [Decimal64VectorBatch]
+#[derive(Debug, Clone)]
+pub struct Decimal64VectorBatchIterator<'a> {
+    batch: PhantomData<&'a Decimal64VectorBatch<'a>>,
+    data_index: isize,
+    not_null_index: isize,
+    data: *const i64,
+    not_null: Option<ptr::NonNull<i8>>,
+    num_elements: isize,
+    scale: u32,
+}
+
+impl<'a> Iterator for Decimal64VectorBatchIterator<'a> {
+    type Item = Option<Decimal>;
+
+    fn next(&mut self) -> Option<Option<Decimal>> {
+        if self.not_null_index >= self.num_elements {
+            return None;
+        }
+
+        if let Some(not_null) = self.not_null {
+            let not_null = not_null.as_ptr();
+            // This is should be safe because we just checked not_null_index is lower
+            // than self.num_elements, which is the length of 'not_null'
+            if unsafe { *not_null.offset(self.not_null_index) } == 0 {
+                self.not_null_index += 1;
+                return Some(None);
+            }
+        }
+
+        self.not_null_index += 1;
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array plus the number of nulls that we skipped,
+        // and we checked 'index' is lower than 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.data_index) };
+
+        self.data_index += 1;
+
+        Some(Some(Decimal::new(datum, self.scale)))
+    }
+}
+
+/// A specialized [ColumnVectorBatch] whose values are known to be 64-bits decimal numbers
+///
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
+pub struct Decimal128VectorBatch<'a>(&'a ffi::Decimal128VectorBatch);
+
+impl_debug!(
+    Decimal128VectorBatch<'a>,
+    ffi::Decimal128VectorBatch_toString
+);
+
+impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
+    type IteratorType = Decimal128VectorBatchIterator<'a>;
+
+    fn precision(&self) -> i32 {
+        ffi::Decimal128VectorBatch_get_precision(self.0)
+    }
+
+    fn scale(&self) -> i32 {
+        ffi::Decimal128VectorBatch_get_scale(self.0)
+    }
+
+    fn iter(&self) -> Decimal128VectorBatchIterator<'a> {
+        let data = ffi::Decimal128VectorBatch_get_values(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::Decimal128VectorBatch_into_ColumnVectorBatch(&self.0));
+        let num_elements = vector_batch.num_elements();
+        let not_null = vector_batch.not_null_ptr();
+
+        Decimal128VectorBatchIterator {
+            batch: PhantomData,
+            data_index: 0,
+            not_null_index: 0,
+            data,
+            not_null,
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+            scale: self
+                .scale()
+                .try_into()
+                .expect("Could not convert scale from i32 to u43"),
+        }
+    }
+}
+
+/// Iterator on [Decimal128VectorBatch]
+#[derive(Debug, Clone)]
+pub struct Decimal128VectorBatchIterator<'a> {
+    batch: PhantomData<&'a Decimal128VectorBatch<'a>>,
+    data_index: isize,
+    not_null_index: isize,
+    data: *const memorypool::ffi::Int128,
+    not_null: Option<ptr::NonNull<i8>>,
+    num_elements: isize,
+    scale: u32,
+}
+
+impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
+    type Item = Option<Decimal>;
+
+    fn next(&mut self) -> Option<Option<Decimal>> {
+        if self.not_null_index >= self.num_elements {
+            return None;
+        }
+
+        if let Some(not_null) = self.not_null {
+            let not_null = not_null.as_ptr();
+            // This is should be safe because we just checked not_null_index is lower
+            // than self.num_elements, which is the length of 'not_null'
+            if unsafe { *not_null.offset(self.not_null_index) } == 0 {
+                self.not_null_index += 1;
+                return Some(None);
+            }
+        }
+
+        self.not_null_index += 1;
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array plus the number of nulls that we skipped,
+        // and we checked 'index' is lower than 'num_elements'.
+        //
+        // We need to do a round-trip of conversion through i128 because Int128 is
+        // opaque, so it is not sized, so .offset() would just return the initial
+        // pointer.
+        let datum = unsafe {
+            &*((self.data as *const i128).offset(self.data_index) as *const memorypool::ffi::Int128)
+        };
+
+        self.data_index += 1;
+
+        let datum = (datum.getHighBits() as i128) << 64 | (datum.getLowBits() as i128);
+
+        Some(Some(Decimal::from_i128_with_scale(datum, self.scale)))
     }
 }
 
