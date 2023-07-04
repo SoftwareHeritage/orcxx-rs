@@ -59,12 +59,20 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
             })
         }
         ColumnTree::Date(column) => map_nullable_json_values(column.iter(), |days| {
-            let s = chrono::NaiveDate::from_ymd_opt(1970, 1, 1)
-                .unwrap()
-                .checked_add_days(chrono::Days::new(
-                    days.try_into()
-                        .expect("Failed to convert days from i64 to u64"),
-                ))
+            let substract = days <= 0;
+            let days = chrono::Days::new(
+                days.abs()
+                    .try_into()
+                    .expect("Failed to convert positive days from i64 to u64"),
+            );
+            let date = chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+            let date = if substract {
+                date.checked_sub_days(days)
+            } else {
+                date.checked_add_days(days)
+            };
+
+            let s = date
                 .expect("Overflowed NaiveDate")
                 .format("%Y-%m-%d")
                 .to_string();
