@@ -241,43 +241,43 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
             None
         }
     }
-    pub fn try_into_longs(self) -> OrcResult<LongVectorBatch<'a>> {
+    pub fn try_into_longs(&self) -> OrcResult<LongVectorBatch<'a>> {
         ffi::try_into_LongVectorBatch(self.0)
             .map_err(OrcError)
             .map(LongVectorBatch)
     }
 
-    pub fn try_into_doubles(self) -> OrcResult<DoubleVectorBatch<'a>> {
+    pub fn try_into_doubles(&self) -> OrcResult<DoubleVectorBatch<'a>> {
         ffi::try_into_DoubleVectorBatch(self.0)
             .map_err(OrcError)
             .map(DoubleVectorBatch)
     }
 
-    pub fn try_into_strings(self) -> OrcResult<StringVectorBatch<'a>> {
+    pub fn try_into_strings(&self) -> OrcResult<StringVectorBatch<'a>> {
         ffi::try_into_StringVectorBatch(self.0)
             .map_err(OrcError)
             .map(StringVectorBatch)
     }
 
-    pub fn try_into_timestamps(self) -> OrcResult<TimestampVectorBatch<'a>> {
+    pub fn try_into_timestamps(&self) -> OrcResult<TimestampVectorBatch<'a>> {
         ffi::try_into_TimestampVectorBatch(self.0)
             .map_err(OrcError)
             .map(TimestampVectorBatch)
     }
 
-    pub fn try_into_structs(self) -> OrcResult<StructVectorBatch<'a>> {
+    pub fn try_into_structs(&self) -> OrcResult<StructVectorBatch<'a>> {
         ffi::try_into_StructVectorBatch(self.0)
             .map_err(OrcError)
             .map(StructVectorBatch)
     }
 
-    pub fn try_into_lists(self) -> OrcResult<ListVectorBatch<'a>> {
+    pub fn try_into_lists(&self) -> OrcResult<ListVectorBatch<'a>> {
         ffi::try_into_ListVectorBatch(self.0)
             .map_err(OrcError)
             .map(ListVectorBatch)
     }
 
-    pub fn try_into_maps(self) -> OrcResult<MapVectorBatch<'a>> {
+    pub fn try_into_maps(&self) -> OrcResult<MapVectorBatch<'a>> {
         ffi::try_into_MapVectorBatch(self.0)
             .map_err(OrcError)
             .map(MapVectorBatch)
