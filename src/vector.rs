@@ -13,6 +13,7 @@ use std::ptr;
 
 use cxx::UniquePtr;
 
+use memorypool;
 use utils::{OrcError, OrcResult};
 
 // TODO: remove $function_name when https://github.com/rust-lang/rust/issues/29599
@@ -298,22 +299,13 @@ impl_debug!(LongVectorBatch<'a>, ffi::LongVectorBatch_toString);
 
 impl<'a> LongVectorBatch<'a> {
     pub fn iter(&self) -> LongVectorBatchIterator {
-        let data = ffi::LongVectorBatch_get_data(self.0).data();
+        let data = ffi::LongVectorBatch_get_data(self.0);
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::LongVectorBatch_into_ColumnVectorBatch(&self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
-        LongVectorBatchIterator {
-            batch: PhantomData,
-            data_index: 0,
-            not_null_index: 0,
-            data,
-            not_null,
-            num_elements: num_elements
-                .try_into()
-                .expect("could not convert u64 to isize"),
-        }
+        unsafe { LongVectorBatchIterator::new(data, not_null, num_elements) }
     }
 }
 
@@ -326,6 +318,28 @@ pub struct LongVectorBatchIterator<'a> {
     data: *const i64,
     not_null: Option<ptr::NonNull<i8>>,
     num_elements: isize,
+}
+
+impl<'a> LongVectorBatchIterator<'a> {
+    unsafe fn new(
+        data_buffer: &memorypool::ffi::Int64DataBuffer,
+        not_null: Option<ptr::NonNull<i8>>,
+        num_elements: u64,
+    ) -> LongVectorBatchIterator<'a> {
+        // TODO: do this once https://github.com/apache/orc/commit/294a5e28f7f0420eb1fdc76dffc33608692c1b20
+        // is released:
+        // assert_eq!(std::mem::size_of(u64)*num_elements, data_buffer.size())
+        LongVectorBatchIterator {
+            batch: PhantomData,
+            data_index: 0,
+            not_null_index: 0,
+            data: data_buffer.data(),
+            not_null,
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+        }
+    }
 }
 
 impl<'a> Iterator for LongVectorBatchIterator<'a> {
@@ -520,22 +534,13 @@ impl<'a> ListVectorBatch<'a> {
 
     /// Offset of each ist in the flat vector. None values indicate absent lists
     pub fn iter_offsets(&self) -> LongVectorBatchIterator<'a> {
-        let offsets = ffi::ListVectorBatch_get_offsets(self.0).data();
+        let offsets = ffi::ListVectorBatch_get_offsets(self.0);
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::ListVectorBatch_into_ColumnVectorBatch(&self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
-        LongVectorBatchIterator {
-            batch: PhantomData,
-            data_index: 0,
-            not_null_index: 0,
-            data: offsets,
-            not_null,
-            num_elements: num_elements
-                .try_into()
-                .expect("could not convert u64 to isize"),
-        }
+        unsafe { LongVectorBatchIterator::new(offsets, not_null, num_elements) }
     }
 }
 
@@ -561,21 +566,12 @@ impl<'a> MapVectorBatch<'a> {
 
     /// Offset of each ist in the flat vector. None values indicate absent maps
     pub fn iter_offsets(&self) -> LongVectorBatchIterator<'a> {
-        let offsets = ffi::MapVectorBatch_get_offsets(self.0).data();
+        let offsets = ffi::MapVectorBatch_get_offsets(self.0);
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::MapVectorBatch_into_ColumnVectorBatch(&self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
-        LongVectorBatchIterator {
-            batch: PhantomData,
-            data_index: 0,
-            not_null_index: 0,
-            data: offsets,
-            not_null,
-            num_elements: num_elements
-                .try_into()
-                .expect("could not convert u64 to isize"),
-        }
+        unsafe { LongVectorBatchIterator::new(offsets, not_null, num_elements) }
     }
 }
