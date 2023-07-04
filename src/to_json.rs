@@ -39,6 +39,37 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
         ColumnTree::String(column) => map_nullable_json_values(column.iter(), |s| {
             JsonValue::String(String::from_utf8_lossy(s).into_owned())
         }),
+        ColumnTree::Timestamp(column) => {
+            map_nullable_json_values(column.iter(), |(seconds, nanoseconds)| {
+                let mut s = chrono::NaiveDateTime::from_timestamp_opt(
+                    seconds,
+                    nanoseconds
+                        .try_into()
+                        .expect("More than 2**32 nanoseconds in a second"),
+                )
+                .expect("Could not create NaiveDateTime")
+                .format("%Y-%m-%d %H:%M:%S.%f")
+                .to_string()
+                .trim_end_matches("0")
+                .to_string();
+                if s.ends_with(".") {
+                    s.push('0');
+                }
+                JsonValue::String(s)
+            })
+        }
+        ColumnTree::Date(column) => map_nullable_json_values(column.iter(), |days| {
+            let s = chrono::NaiveDate::from_ymd_opt(1970, 1, 1)
+                .unwrap()
+                .checked_add_days(chrono::Days::new(
+                    days.try_into()
+                        .expect("Failed to convert days from i64 to u64"),
+                ))
+                .expect("Overflowed NaiveDate")
+                .format("%Y-%m-%d")
+                .to_string();
+            JsonValue::String(s)
+        }),
         ColumnTree::Binary(column) => map_nullable_json_values(column.iter(), |s| {
             JsonValue::Array(
                 s.into_iter()

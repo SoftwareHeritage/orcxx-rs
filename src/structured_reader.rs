@@ -67,7 +67,9 @@ pub enum ColumnTree<'a> {
     Double(vector::DoubleVectorBatch<'a>),
     String(vector::StringVectorBatch<'a>),
     Binary(vector::StringVectorBatch<'a>),
-    Timestamp, // TODO
+    Timestamp(vector::TimestampVectorBatch<'a>),
+    /// Number of days since 1970-01-01
+    Date(vector::LongVectorBatch<'a>),
     /// A column of lists
     ///
     /// The offsets are such that the first list is elements `offsets[0]` (inclusive) to
@@ -107,7 +109,6 @@ pub enum ColumnTree<'a> {
     },
     Union,            // TODO
     Decimal,          // TODO
-    Date,             // TODO
     Varchar,          // TODO
     Char,             // TODO
     TimestampInstant, // TODO
@@ -163,7 +164,17 @@ fn columnvectorbatch_to_columntree<'a>(
                 .try_into_strings()
                 .expect("Failed to cast strings vector batch"),
         ),
-        Kind::Timestamp => ColumnTree::Timestamp, // TODO
+        Kind::Timestamp => ColumnTree::Timestamp(
+            vector_batch
+                .try_into_timestamps()
+                .expect("Failed to cast timestamps vector batch"),
+        ),
+        Kind::Date => ColumnTree::Date(
+            vector_batch
+                .try_into_longs()
+                .expect("Failed to cast date vector batch"),
+        ),
+
         Kind::List(subtype) => {
             let lists_vector_batch = vector_batch
                 .try_into_lists()
@@ -216,7 +227,6 @@ fn columnvectorbatch_to_columntree<'a>(
         }
         Kind::Union(subtypes) => ColumnTree::Union, // TODO
         Kind::Decimal { precision, scale } => ColumnTree::Decimal, // TODO
-        Kind::Date => ColumnTree::Date,             // TODO
         Kind::Varchar(_) => ColumnTree::Varchar,    // TODO
         Kind::Char(_) => ColumnTree::Char,          // TODO
         Kind::TimestampInstant => ColumnTree::TimestampInstant, // TODO

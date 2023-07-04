@@ -69,6 +69,8 @@ pub mod utils;
 pub mod vector;
 
 #[cfg(feature = "json")]
+extern crate chrono;
+#[cfg(feature = "json")]
 extern crate json;
 #[cfg(feature = "json")]
 pub mod to_json;

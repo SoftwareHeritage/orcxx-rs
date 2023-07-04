@@ -67,6 +67,7 @@ namespace orcxx_rs {
         getter(keys);
         getter(elements);
         getter(offsets);
+        getter(nanoseconds);
         getter(hasNulls);
         getter(notNull);
     }

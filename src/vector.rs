@@ -63,6 +63,7 @@ pub(crate) mod ffi {
         type LongVectorBatch;
         type DoubleVectorBatch;
         type StringVectorBatch;
+        type TimestampVectorBatch;
         type StructVectorBatch;
         type ListVectorBatch;
         type MapVectorBatch;
@@ -97,6 +98,11 @@ pub(crate) mod ffi {
         #[rust_name = "StringVectorBatch_get_length"]
         fn get_length(vectorBatch: &StringVectorBatch) -> &Int64DataBuffer;
 
+        #[rust_name = "TimestampVectorBatch_get_data"]
+        fn get_data(vectorBatch: &TimestampVectorBatch) -> &Int64DataBuffer;
+        #[rust_name = "TimestampVectorBatch_get_nanoseconds"]
+        fn get_nanoseconds(vectorBatch: &TimestampVectorBatch) -> &Int64DataBuffer;
+
         #[rust_name = "StructVectorBatch_get_fields"]
         fn get_fields(vectorBatch: &StructVectorBatch) -> &CxxVector<ColumnVectorBatchPtr>;
 
@@ -121,6 +127,8 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&DoubleVectorBatch>;
         #[rust_name = "try_into_StringVectorBatch"]
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&StringVectorBatch>;
+        #[rust_name = "try_into_TimestampVectorBatch"]
+        fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&TimestampVectorBatch>;
         #[rust_name = "try_into_StructVectorBatch"]
         fn try_into(vectorBatch: &ColumnVectorBatch) -> Result<&StructVectorBatch>;
         #[rust_name = "try_into_ListVectorBatch"]
@@ -134,6 +142,8 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &DoubleVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "StringVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &StringVectorBatch) -> &ColumnVectorBatch;
+        #[rust_name = "TimestampVectorBatch_into_ColumnVectorBatch"]
+        fn try_into(vectorBatch: &TimestampVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "ListVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &ListVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "MapVectorBatch_into_ColumnVectorBatch"]
@@ -147,6 +157,8 @@ pub(crate) mod ffi {
         fn toString(type_: &DoubleVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "StringVectorBatch_toString"]
         fn toString(type_: &StringVectorBatch) -> UniquePtr<CxxString>;
+        #[rust_name = "TimestampVectorBatch_toString"]
+        fn toString(type_: &TimestampVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "StructVectorBatch_toString"]
         fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "ListVectorBatch_toString"]
@@ -245,6 +257,12 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
         ffi::try_into_StringVectorBatch(self.0)
             .map_err(OrcError)
             .map(StringVectorBatch)
+    }
+
+    pub fn try_into_timestamps(self) -> OrcResult<TimestampVectorBatch<'a>> {
+        ffi::try_into_TimestampVectorBatch(self.0)
+            .map_err(OrcError)
+            .map(TimestampVectorBatch)
     }
 
     pub fn try_into_structs(self) -> OrcResult<StructVectorBatch<'a>> {
@@ -515,6 +533,77 @@ impl<'a> Iterator for StringVectorBatchIterator<'a> {
         // the string.
         let datum = datum as *const u8;
         Some(Some(unsafe { std::slice::from_raw_parts(datum, length) }))
+    }
+}
+
+/// A specialized [ColumnVectorBatch] whose values are known to be timestamps,
+/// represented by seconds and nanoseconds since 1970-01-01 GMT.
+///
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_timestamps`]
+pub struct TimestampVectorBatch<'a>(&'a ffi::TimestampVectorBatch);
+
+impl_debug!(TimestampVectorBatch<'a>, ffi::TimestampVectorBatch_toString);
+
+impl<'a> TimestampVectorBatch<'a> {
+    pub fn iter(&self) -> TimestampVectorBatchIterator {
+        let data = ffi::TimestampVectorBatch_get_data(self.0).data();
+        let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::TimestampVectorBatch_into_ColumnVectorBatch(&self.0));
+        let num_elements = vector_batch.num_elements();
+        let not_null = vector_batch.not_null_ptr();
+
+        TimestampVectorBatchIterator {
+            batch: PhantomData,
+            index: 0,
+            data,
+            not_null,
+            nanoseconds,
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+        }
+    }
+}
+
+/// Iterator on [TimestampVectorBatch]
+#[derive(Debug, Clone)]
+pub struct TimestampVectorBatchIterator<'a> {
+    batch: PhantomData<&'a TimestampVectorBatch<'a>>,
+    index: isize,
+    data: *const i64, // Seconds since 1970-01-01
+    nanoseconds: *const i64,
+    not_null: Option<ptr::NonNull<i8>>,
+    num_elements: isize,
+}
+
+impl<'a> Iterator for TimestampVectorBatchIterator<'a> {
+    type Item = Option<(i64, i64)>;
+
+    fn next(&mut self) -> Option<Option<(i64, i64)>> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        if let Some(not_null) = self.not_null {
+            let not_null = not_null.as_ptr();
+            // This is should be safe because we just checked not_null_index is lower
+            // than self.num_elements, which is the length of 'not_null'
+            if unsafe { *not_null.offset(self.index) } == 0 {
+                self.index += 1;
+                return Some(None);
+            }
+        }
+
+        // These two should be safe because 'num_elements' should be exactly
+        // the number of element in each array, and we checked 'index' is lower than
+        // 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+        let nanoseconds = unsafe { *self.nanoseconds.offset(self.index) };
+
+        self.index += 1;
+
+        Some(Some((datum, nanoseconds)))
     }
 }
 
