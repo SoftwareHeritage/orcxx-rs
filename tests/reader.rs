@@ -108,7 +108,11 @@ fn read_file() {
             match vector.try_into_strings() {
                 Ok(string_vector) => {
                     for s in string_vector.iter() {
-                        all_strings.push(std::str::from_utf8(s).unwrap_or("<not utf8>").to_owned())
+                        all_strings.push(
+                            std::str::from_utf8(s.unwrap_or(b"<null>"))
+                                .unwrap_or("<not utf8>")
+                                .to_owned(),
+                        )
                     }
                 }
                 Err(e) => println!("failed to cast to StringDataBuffer: {:?}", e),

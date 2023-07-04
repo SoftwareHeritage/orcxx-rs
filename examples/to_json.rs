@@ -21,7 +21,7 @@ fn to_json(orc_path: &str) {
     let mut structured_row_reader = StructuredRowReader::new(&mut row_reader, 1024);
 
     while let Some(columns) = structured_row_reader.next() {
-        for object in columntree_to_json_rows(&columns) {
+        for object in columntree_to_json_rows(columns) {
             println!("{}", json::stringify_pretty(object, 4));
         }
     }

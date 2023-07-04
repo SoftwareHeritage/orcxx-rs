@@ -8,6 +8,7 @@
 use kind::Kind;
 use reader::RowReader;
 use vector;
+use vector::ColumnVectorBatch;
 
 /// Reads rows from ORC files to a tree of vectors (one for each column)
 ///
@@ -72,11 +73,13 @@ pub enum ColumnTree<'a> {
     /// The offsets are such that the first list is elements `offsets[0]` (inclusive) to
     /// `offsets[1]` (exclusive), the second list is elements `offsets[1]` (inclusive)
     /// to `offsets[2]` (exclusive), etc. and the last list is elements
-    /// `offsets[offsets.len()-1]` to the end
+    /// `offsets[offsets.len()-1]` to the end.
     ///
-    /// Therefore, offsets.len() is exactly the number of lists.
+    /// None values in `offsets` indicates a null instead of a list.
+    ///
+    /// Therefore, offsets.collect().len() is exactly the number of lists.
     List {
-        offsets: &'a [i64],
+        offsets: vector::LongVectorBatchIterator<'a>,
         elements: Box<ColumnTree<'a>>,
     },
     /// A column of maps
@@ -88,12 +91,20 @@ pub enum ColumnTree<'a> {
     ///
     /// Therefore, offsets.len() is exactly the number of maps.
     Map {
-        offsets: &'a [i64],
+        offsets: vector::LongVectorBatchIterator<'a>,
         keys: Box<ColumnTree<'a>>,
         elements: Box<ColumnTree<'a>>,
     },
     /// Pairs of (field_name, column_tree)
-    Struct(Vec<(String, ColumnTree<'a>)>),
+    ///
+    /// if not [None], `not_null` is an array of booleans indicating which rows
+    /// are present, so there are exactly as many values in the child `ColumnTree`s
+    /// as there are true values in `not_null`.
+    Struct {
+        not_null: Option<&'a [i8]>,
+        num_elements: u64, // TODO: deduplicate this with the not_null slice size?
+        elements: Vec<(String, ColumnTree<'a>)>,
+    },
     Union,            // TODO
     Decimal,          // TODO
     Date,             // TODO
@@ -158,7 +169,7 @@ fn columnvectorbatch_to_columntree<'a>(
                 .try_into_lists()
                 .expect("Failed to cast lists vector_batch");
             ColumnTree::List {
-                offsets: lists_vector_batch.offsets(),
+                offsets: lists_vector_batch.iter_offsets(),
                 elements: Box::new(columnvectorbatch_to_columntree(
                     lists_vector_batch.elements(),
                     subtype,
@@ -170,7 +181,7 @@ fn columnvectorbatch_to_columntree<'a>(
                 .try_into_maps()
                 .expect("Failed to cast maps vector_batch");
             ColumnTree::Map {
-                offsets: maps_vector_batch.offsets(),
+                offsets: maps_vector_batch.iter_offsets(),
                 keys: Box::new(columnvectorbatch_to_columntree(
                     maps_vector_batch.keys(),
                     key,
@@ -181,8 +192,13 @@ fn columnvectorbatch_to_columntree<'a>(
                 )),
             }
         }
-        Kind::Struct(subtypes) => ColumnTree::Struct(
-            vector_batch
+        Kind::Struct(subtypes) => {
+            let num_elements = vector_batch.num_elements();
+            let not_null = vector_batch.not_null();
+            if let Some(not_null) = not_null {
+                assert_eq!(num_elements, not_null.len() as u64);
+            }
+            let elements = vector_batch
                 .try_into_structs()
                 .expect("Failed to cast structs vector_batch")
                 .fields()
@@ -191,8 +207,13 @@ fn columnvectorbatch_to_columntree<'a>(
                 .map(|(column, (name, kind))| {
                     (name.clone(), columnvectorbatch_to_columntree(column, kind))
                 })
-                .collect(),
-        ),
+                .collect();
+            ColumnTree::Struct {
+                not_null,
+                num_elements,
+                elements,
+            }
+        }
         Kind::Union(subtypes) => ColumnTree::Union, // TODO
         Kind::Decimal { precision, scale } => ColumnTree::Decimal, // TODO
         Kind::Date => ColumnTree::Date,             // TODO

@@ -29,4 +29,11 @@ pub(crate) mod ffi {
 
         fn data(&self) -> *const *mut c_char;
     }
+
+    #[namespace = "orcxx_rs"]
+    unsafe extern "C++" {
+        type CharDataBuffer;
+
+        fn data(&self) -> *const c_char;
+    }
 }

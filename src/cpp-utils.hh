@@ -67,8 +67,11 @@ namespace orcxx_rs {
         getter(keys);
         getter(elements);
         getter(offsets);
+        getter(hasNulls);
+        getter(notNull);
     }
 
+    typedef orc::DataBuffer<char> CharDataBuffer;
     typedef orc::DataBuffer<char*> StringDataBuffer;
     typedef orc::DataBuffer<int64_t> Int64DataBuffer;
     typedef orc::DataBuffer<double> DoubleDataBuffer;
