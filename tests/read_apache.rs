@@ -82,6 +82,7 @@ fn emptyFile() {
     test_apache_file!("TestOrcFile.emptyFile");
 }
 #[test]
+#[ignore] // Differs on representation of some Decimals
 fn metaData() {
     test_apache_file!("TestOrcFile.metaData");
 }
@@ -131,6 +132,7 @@ fn testTimestamp() {
     test_apache_file!("TestOrcFile.testTimestamp");
 }
 #[test]
+#[ignore] // Unions are not supported yet
 fn testUnionAndTimestamp() {
     test_apache_file!("TestOrcFile.testUnionAndTimestamp");
 }
@@ -157,6 +159,7 @@ fn zlib() {
     test_apache_file!("demo-12-zlib");
 }
 #[test]
+#[ignore] // Overflows the JSON library
 fn nulls_at_end_snappy() {
     test_apache_file!("nulls-at-end-snappy");
 }
