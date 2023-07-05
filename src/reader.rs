@@ -88,7 +88,7 @@ impl InputStream {
     }
 }
 
-/// Reads ORC file meta-data and constructs [RowReader].
+/// Reads ORC file meta-data and constructs [`RowReader`]
 pub struct Reader(UniquePtr<ffi::Reader>);
 
 impl Reader {
@@ -115,7 +115,7 @@ impl Reader {
     }
 }
 
-/// Options passed to [Reader::row_reader]
+/// Options passed to [`Reader::row_reader`]
 pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);
 
 impl Default for RowReaderOptions {
@@ -124,11 +124,11 @@ impl Default for RowReaderOptions {
     }
 }
 
-/// Reads rows from ORC files to a raw [vector::OwnedColumnVectorBatch]
+/// Reads rows from ORC files to a raw [`vector::OwnedColumnVectorBatch`]
 pub struct RowReader(UniquePtr<ffi::RowReader>);
 
 impl RowReader {
-    /// Creates a vector batch, to be passed to [RowReader::read_into]
+    /// Creates a vector batch, to be passed to [`RowReader::read_into`]
     ///
     /// ``size`` is the number of rows to read at once.
     pub fn row_batch(&mut self, size: u64) -> vector::OwnedColumnVectorBatch {
@@ -143,8 +143,8 @@ impl RowReader {
 
     /// Returns the data type being read.
     ///
-    /// With the default [RowReaderOptions], this is the same as [Reader::kind].
-    /// Otherwise this is usually a subset [Reader::kind].
+    /// With the default [`RowReaderOptions`], this is the same as [`Reader::kind`].
+    /// Otherwise this is usually a subset [`Reader::kind`].
     pub fn selected_kind(&self) -> kind::Kind {
         kind::Kind::new_from_orc_type(self.0.getSelectedType())
     }

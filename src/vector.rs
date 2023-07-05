@@ -198,7 +198,7 @@ pub(crate) mod ffi {
     }
 }
 
-/// Common methods of [OwnedColumnVectorBatch] and [BorrowedColumnVectorBatch]
+/// Common methods of [`OwnedColumnVectorBatch`] and [`BorrowedColumnVectorBatch`]
 pub trait ColumnVectorBatch {
     fn inner(&self) -> &ffi::ColumnVectorBatch;
 
@@ -210,7 +210,7 @@ pub trait ColumnVectorBatch {
     /// indicating whether each row is null (and should be skipped when reading
     /// it) or not.
     ///
-    /// See [BorrowedColumnVectorBatch::not_null] to get a slice.
+    /// See [`BorrowedColumnVectorBatch::not_null`] to get a slice.
     fn not_null_ptr(&self) -> Option<ptr::NonNull<i8>> {
         if ffi::get_hasNulls(self.inner()) {
             let not_null = ffi::get_notNull(self.inner()).data();
@@ -326,7 +326,7 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be structures.
+/// A specialized [`ColumnVectorBatch`] whose values are known to be structures.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_structs`]
 pub struct StructVectorBatch<'a>(&'a ffi::StructVectorBatch);
@@ -350,7 +350,7 @@ impl<'a> StructVectorBatch<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be integer-like.
+/// A specialized [`ColumnVectorBatch`] whose values are known to be integer-like.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_longs`]
 pub struct LongVectorBatch<'a>(&'a ffi::LongVectorBatch);
@@ -369,7 +369,7 @@ impl<'a> LongVectorBatch<'a> {
     }
 }
 
-/// Iterator on [LongVectorBatch]
+/// Iterator on [`LongVectorBatch`]
 #[derive(Debug, Clone)]
 pub struct LongVectorBatchIterator<'a> {
     batch: PhantomData<&'a LongVectorBatch<'a>>,
@@ -433,7 +433,7 @@ impl<'a> Iterator for LongVectorBatchIterator<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be floating-point-like
+/// A specialized [`ColumnVectorBatch`] whose values are known to be floating-point-like
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
 pub struct DoubleVectorBatch<'a>(&'a ffi::DoubleVectorBatch);
@@ -461,7 +461,7 @@ impl<'a> DoubleVectorBatch<'a> {
     }
 }
 
-/// Iterator on [DoubleVectorBatch]
+/// Iterator on [`DoubleVectorBatch`]
 #[derive(Debug, Clone)]
 pub struct DoubleVectorBatchIterator<'a> {
     batch: PhantomData<&'a DoubleVectorBatch<'a>>,
@@ -503,7 +503,7 @@ impl<'a> Iterator for DoubleVectorBatchIterator<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be string-like.
+/// A specialized [`ColumnVectorBatch`] whose values are known to be string-like.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_strings`]
 pub struct StringVectorBatch<'a>(&'a ffi::StringVectorBatch);
@@ -532,7 +532,7 @@ impl<'a> StringVectorBatch<'a> {
     }
 }
 
-/// Iterator on [StringVectorBatch]
+/// Iterator on [`StringVectorBatch`]
 #[derive(Debug, Clone)]
 pub struct StringVectorBatchIterator<'a> {
     batch: PhantomData<&'a StringVectorBatch<'a>>,
@@ -578,7 +578,7 @@ impl<'a> Iterator for StringVectorBatchIterator<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be timestamps,
+/// A specialized [`ColumnVectorBatch`] whose values are known to be timestamps,
 /// represented by seconds and nanoseconds since 1970-01-01 GMT.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_timestamps`]
@@ -608,7 +608,7 @@ impl<'a> TimestampVectorBatch<'a> {
     }
 }
 
-/// Iterator on [TimestampVectorBatch]
+/// Iterator on [`TimestampVectorBatch`]
 #[derive(Debug, Clone)]
 pub struct TimestampVectorBatchIterator<'a> {
     batch: PhantomData<&'a TimestampVectorBatch<'a>>,
@@ -649,7 +649,7 @@ impl<'a> Iterator for TimestampVectorBatchIterator<'a> {
     }
 }
 
-/// Common trait for [Decimal64VectorBatch] and [Decimal128VectorBatch]
+/// Common methods of [`Decimal64VectorBatch`] and [`Decimal128VectorBatch`]
 pub trait DecimalVectorBatch<'a> {
     type IteratorType: Iterator<Item = Option<Decimal>>;
 
@@ -660,7 +660,7 @@ pub trait DecimalVectorBatch<'a> {
     fn iter(&self) -> Self::IteratorType;
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be 64-bits decimal numbers
+/// A specialized [`ColumnVectorBatch`] whose values are known to be 64-bits decimal numbers
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
 pub struct Decimal64VectorBatch<'a>(&'a ffi::Decimal64VectorBatch);
@@ -702,7 +702,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     }
 }
 
-/// Iterator on [Decimal64VectorBatch]
+/// Iterator on [`Decimal64VectorBatch`]
 #[derive(Debug, Clone)]
 pub struct Decimal64VectorBatchIterator<'a> {
     batch: PhantomData<&'a Decimal64VectorBatch<'a>>,
@@ -745,7 +745,7 @@ impl<'a> Iterator for Decimal64VectorBatchIterator<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are known to be 64-bits decimal numbers
+/// A specialized [`ColumnVectorBatch`] whose values are known to be 64-bits decimal numbers
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
 pub struct Decimal128VectorBatch<'a>(&'a ffi::Decimal128VectorBatch);
@@ -790,7 +790,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     }
 }
 
-/// Iterator on [Decimal128VectorBatch]
+/// Iterator on [`Decimal128VectorBatch`]
 #[derive(Debug, Clone)]
 pub struct Decimal128VectorBatchIterator<'a> {
     batch: PhantomData<&'a Decimal128VectorBatch<'a>>,
@@ -841,7 +841,7 @@ impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are lists of other values
+/// A specialized [`ColumnVectorBatch`] whose values are lists of other values
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_lists`]
 pub struct ListVectorBatch<'a>(&'a ffi::ListVectorBatch);
@@ -867,7 +867,8 @@ impl<'a> ListVectorBatch<'a> {
     }
 }
 
-/// A specialized [ColumnVectorBatch] whose values are lists of other values
+/// A specialized [`ColumnVectorBatch`] whose values are dictionaries with arbitrary types
+/// as keys and values
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_maps`]
 pub struct MapVectorBatch<'a>(&'a ffi::MapVectorBatch);

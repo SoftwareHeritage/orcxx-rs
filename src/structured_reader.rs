@@ -12,17 +12,17 @@ use vector::ColumnVectorBatch;
 
 /// Reads rows from ORC files to a tree of vectors (one for each column)
 ///
-/// Wrapper for [RowReader] which provides an alternative to [RowReader::row_batch]
-/// and [RowReader::read_into], by returning typed VectorBatches directly instead of
-/// an [vector::OwnedColumnVectorBatch] which needs to be manually cast into
-/// [vector::StructVectorBatch], [vector::StringVectorBatch], ...
+/// Wrapper for [`RowReader`] which provides an alternative to [`RowReader::row_batch`]
+/// and [`RowReader::read_into`], by returning typed VectorBatches directly instead of
+/// an [`vector::OwnedColumnVectorBatch`] which needs to be manually cast into
+/// [`vector::StructVectorBatch`], [`vector::StringVectorBatch`], ...
 pub struct StructuredRowReader<'a> {
     inner: &'a mut RowReader,
     vector_batch: vector::OwnedColumnVectorBatch,
 }
 
 impl<'a> StructuredRowReader<'a> {
-    /// Consumes a [RowReader] to return a [StructuredRowReader]
+    /// Consumes a [`RowReader`] to return a [`StructuredRowReader`]
     ///
     /// ``size`` is the number of rows to read at once.
     pub fn new(row_reader: &'a mut RowReader, size: u64) -> StructuredRowReader<'a> {
@@ -34,7 +34,7 @@ impl<'a> StructuredRowReader<'a> {
 
     /// Returns the next batch of columns, if any.
     ///
-    /// This slightly differs from [Iterator::next] as only one value can exist
+    /// This slightly differs from [`Iterator::next`] as only one value can exist
     /// at any time (because they reuse the same data buffer).
     pub fn next<'b>(&'b mut self) -> Option<ColumnTree<'b>>
     where
@@ -54,8 +54,8 @@ impl<'a> StructuredRowReader<'a> {
 
 /// A set of columns from ORC file
 ///
-/// It is structured so that it follows the [kind::Kind] selected in the
-/// [RowReader]'s options (or the ORC file, by default)
+/// It is structured so that it follows the [`Kind`] selected in the
+/// [`RowReader`]'s options (or the ORC file, by default)
 #[derive(Debug)]
 pub enum ColumnTree<'a> {
     Boolean(vector::LongVectorBatch<'a>),
@@ -99,7 +99,7 @@ pub enum ColumnTree<'a> {
     },
     /// Pairs of (field_name, column_tree)
     ///
-    /// if not [None], `not_null` is an array of booleans indicating which rows
+    /// if not [`None`], `not_null` is an array of booleans indicating which rows
     /// are present, so there are exactly as many values in the child `ColumnTree`s
     /// as there are true values in `not_null`.
     Struct {

@@ -11,7 +11,7 @@
 //!
 //! Never, assuming the underlying C++ library behaves as expected.
 //!
-//! C++ exceptions should be converted to Rust [Result].
+//! C++ exceptions should be converted to Rust [`Result`]s.
 //!
 //! # Examples
 //!
