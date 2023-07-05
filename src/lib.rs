@@ -7,6 +7,30 @@
 //!
 //! Currently, it only allows reading files, not writing.
 //!
+//! ORC, short for Optimized Row Columnar, is a column-oriented data storage format.
+//! As such, most of the APIs in this library operate on columns, rather than rows.
+//! In order to work on rows, readers need to "zip" columns together.
+//!
+//! # Usage principles
+//!
+//! [`reader`] contains the entry points to parse a file, and reads into a
+//! [`OwnedColumnVectorBatch`](vector::OwnedColumnVectorBatch) structure, which can be
+//! `.borrow()`ed to get a [`BorrowedColumnVectorBatch`](vector::BorrowedColumnVectorBatch),
+//! which implements most of the operations.
+//!
+//! This structure is untyped, and needs to be cast into the correct type, by calling
+//! [`try_into_longs()`](vector::BorrowedColumnVectorBatch::try_into_longs),
+//! [`try_into_strings()`](vector::BorrowedColumnVectorBatch::try_into_strings),
+//! [`try_into_structs()`](vector::BorrowedColumnVectorBatch::try_into_structs), etc.
+//!
+//! While this works when parsing files whose structure is known, this is not very
+//! practical. The [`StructuredRowReader`](structured_reader::StructuredRowReader) offers
+//! an abstraction over [`RowReader`](reader::RowReader), which reads the schema of the
+//! file (through [`selected_kind()`](reader::RowReader::selected_kind)) and dynamically
+//! casts the vectors into the right type, recursively, in a
+//! [`ColumnTree`](structured_reader::ColumnTree).
+//!
+//!
 //! # Panics
 //!
 //! Never, assuming the underlying C++ library behaves as expected.

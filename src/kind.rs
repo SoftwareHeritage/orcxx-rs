@@ -77,6 +77,12 @@ pub(crate) mod ffi {
     }
 }
 
+/// Represents ORC types.
+///
+/// See <https://orc.apache.org/docs/types.html> for details.
+///
+/// This structure named "kind" instead of "type" in order to avoid clashes with
+/// the Rust keyword.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Kind {
     Boolean,

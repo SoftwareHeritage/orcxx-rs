@@ -3,7 +3,7 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! High-level parser for ORC files
+//! High-level column-oriented parser for ORC files
 
 use kind::Kind;
 use reader::RowReader;

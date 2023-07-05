@@ -3,6 +3,28 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
+//! Produces line-separated JSON documents from ORC
+//!
+//! # Example
+//!
+//! ```
+//! use orcxx::*;
+//!
+//! let orc_path = "orc/examples/TestOrcFile.test1.orc";
+//! let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
+//! let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
+//!
+//! let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
+//!
+//! let mut structured_row_reader = structured_reader::StructuredRowReader::new(&mut row_reader, 1024);
+//!
+//! while let Some(columns) = structured_row_reader.next() {
+//!     for object in to_json::columntree_to_json_rows(columns) {
+//!         println!("{}", json::stringify_pretty(object, 4));
+//!     }
+//! }
+//! ```
+
 use std::convert::TryInto;
 use std::iter;
 
@@ -24,6 +46,8 @@ where
         .collect()
 }
 
+/// Given a set of columns (as a [`ColumnTree`]), returns a vector of rows
+/// represented as a JSON-like data structure.
 pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
     match tree {
         ColumnTree::Boolean(column) => {

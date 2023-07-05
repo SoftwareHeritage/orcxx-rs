@@ -3,7 +3,11 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! Contains for columns for values of uniform types
+//! Containers for columns of values of uniform types
+//!
+//! Structures in this modules are returned by [`RowReader`](crate::reader::RowReader) and
+//! [`StructuredRowReader`](crate::structured_reader::StructuredRowReader) and cannot
+//! be instantiated directly.
 
 use std::convert::TryInto;
 use std::fmt;
