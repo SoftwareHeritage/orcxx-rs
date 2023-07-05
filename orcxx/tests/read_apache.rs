@@ -6,7 +6,7 @@
 #![allow(non_snake_case)]
 
 #[cfg(not(feature = "json"))]
-compile_error!("Feature 'json' must be enabled for this test.")
+compile_error!("Feature 'json' must be enabled for this test.");
 
 /// Tests against `.orc` and `.jsn.gz` in the official test suite (`orc/examples/`)
 extern crate flate2;
