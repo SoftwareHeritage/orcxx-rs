@@ -20,9 +20,9 @@
 //! use orcxx::vector::ColumnVectorBatch;
 //!
 //! let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
-//!     .expect("Could not read");
+//!     .expect("Could not open");
 //!
-//! let reader = reader::Reader::new(input_stream);
+//! let reader = reader::Reader::new(input_stream).expect("Could not read");
 //!
 //! println!("{:#?}", reader.kind()); // Prints the type of columns in the file
 //!
@@ -41,7 +41,9 @@
 //!         match vector.try_into_strings() {
 //!             Ok(string_vector) => {
 //!                 for s in string_vector.iter() {
-//!                     all_strings.push(std::str::from_utf8(s).unwrap().to_owned())
+//!                     all_strings.push(
+//!                         std::str::from_utf8(s.unwrap_or(b"<null>"))
+//!                         .unwrap().to_owned())
 //!                 }
 //!             }
 //!             Err(e) => {}
