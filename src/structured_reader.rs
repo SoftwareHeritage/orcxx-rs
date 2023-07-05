@@ -109,8 +109,6 @@ pub enum ColumnTree<'a> {
     },
     Decimal64(vector::Decimal64VectorBatch<'a>),
     Decimal128(vector::Decimal128VectorBatch<'a>),
-    Varchar,          // TODO
-    Char,             // TODO
     TimestampInstant, // TODO
 }
 
@@ -154,7 +152,7 @@ fn columnvectorbatch_to_columntree<'a>(
                 .try_into_doubles()
                 .expect("Failed to cast doubles vector batch"),
         ),
-        Kind::String => ColumnTree::String(
+        Kind::String | Kind::Varchar(_) | Kind::Char(_) => ColumnTree::String(
             vector_batch
                 .try_into_strings()
                 .expect("Failed to cast strings vector batch"),
@@ -234,8 +232,6 @@ fn columnvectorbatch_to_columntree<'a>(
                     .expect("Failed to cast decimal vector_batch"),
             ),
         },
-        Kind::Varchar(_) => ColumnTree::Varchar, // TODO
-        Kind::Char(_) => ColumnTree::Char,       // TODO
         Kind::TimestampInstant => ColumnTree::TimestampInstant, // TODO
     }
 }
