@@ -54,7 +54,7 @@ fn main() {
 
     println!("cargo:rerun-if-changed={}", orc_src_dir.display());
     for module in BRIDGE_MODULES {
-        println!("cargo:rerun-if-changed={}/{}.rs", manifest_dir, module);
+        println!("cargo:rerun-if-changed={}/{}", manifest_dir, module);
     }
     println!("cargo:rerun-if-changed={}/src/cpp-utils.hh", manifest_dir);
 }
