@@ -236,7 +236,7 @@ impl ColumnVectorBatch for OwnedColumnVectorBatch {
 }
 
 impl OwnedColumnVectorBatch {
-    pub fn borrow(&mut self) -> BorrowedColumnVectorBatch {
+    pub fn borrow(&self) -> BorrowedColumnVectorBatch {
         BorrowedColumnVectorBatch(&self.0)
     }
 }
