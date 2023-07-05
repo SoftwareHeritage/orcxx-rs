@@ -5,6 +5,9 @@
 
 #![allow(non_snake_case)]
 
+#[cfg(not(feature = "json"))]
+compile_error!("Feature 'json' must be enabled for this test.")
+
 /// Tests against `.orc` and `.jsn.gz` in the official test suite (`orc/examples/`)
 extern crate flate2;
 extern crate json;
@@ -67,8 +70,8 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
 macro_rules! test_apache_file {
     ($name:literal) => {
         test_expected_file(
-            concat!("orc/examples/", $name, ".orc"),
-            concat!("orc/examples/expected/", $name, ".jsn.gz"),
+            concat!("../orc/examples/", $name, ".orc"),
+            concat!("../orc/examples/expected/", $name, ".jsn.gz"),
         )
     };
 }

@@ -1,40 +1,5 @@
-[package]
-name = "orcxx"
-version = "0.1.0"
-authors = [
-    "Software Heritage developers <swh-devel@inria.fr>"
+[workspace]
+
+members = [
+    "orcxx",
 ]
-rust-version = "1.63"
-description = "Rust bindings for the official C++ library for Apache ORC"
-readme = "README.md"
-homepage = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
-repository = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
-keywords = ["orc", "apache-orc"]
-categories = ["api-bindings", "encoding", "parser-implementations"]
-
-# orcxx itself is GPL.
-#
-# Apache2 for Apache ORC, BSD for protobuf and snappy, Zlib for zlib.
-# See orc/LICENSE for the text of these licenses
-license = "GPL-3.0-or-later AND Apache2 AND BSD-3-Clause AND Zlib"
-
-build = "build.rs"
-
-[features]
-# Defines a 'to_json' module which allows converting ORC files to JSON objects
-json = ["dep:json", "dep:chrono"]
-
-[dependencies]
-cxx = "1.0"
-json = { version = "0.12.4", optional = true }
-chrono = { version = "0.4.26", optional = true }
-rust_decimal = "1.30.0"
-
-[build-dependencies]
-cxx-build = "1.0"
-
-[dev-dependencies]
-flate2 = "1.0"
-json = "0.12.4"
-pretty_assertions = "1.3.0"
-tempfile = "3.6.0"

@@ -43,7 +43,7 @@
 //! use orcxx::reader;
 //! use orcxx::vector::ColumnVectorBatch;
 //!
-//! let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+//! let input_stream = reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
 //!     .expect("Could not open");
 //!
 //! let reader = reader::Reader::new(input_stream).expect("Could not read");
