@@ -48,6 +48,24 @@ macro_rules! impl_debug {
     };
 }
 
+macro_rules! impl_upcast {
+    ($struct_name:ident<$lifetime:lifetime>, $function_name:path) => {
+        impl<$lifetime> From<&$struct_name<$lifetime>> for BorrowedColumnVectorBatch<$lifetime> {
+            fn from(vector_batch: &$struct_name<$lifetime>) -> Self {
+                BorrowedColumnVectorBatch($function_name(vector_batch.0))
+            }
+        }
+
+        impl<$lifetime> ColumnVectorBatch<$lifetime> for $struct_name<$lifetime> {
+            fn inner(&self) -> &'a ffi::ColumnVectorBatch {
+                let untyped_vector_batch: BorrowedColumnVectorBatch<$lifetime> = self.into();
+                untyped_vector_batch.0
+            }
+        }
+
+    };
+}
+
 #[cxx::bridge]
 pub(crate) mod ffi {
     // Reimport types from other modules
@@ -174,6 +192,8 @@ pub(crate) mod ffi {
         fn try_into(vectorBatch: &Decimal64VectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "Decimal128VectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &Decimal128VectorBatch) -> &ColumnVectorBatch;
+        #[rust_name = "StructVectorBatch_into_ColumnVectorBatch"]
+        fn try_into(vectorBatch: &StructVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "ListVectorBatch_into_ColumnVectorBatch"]
         fn try_into(vectorBatch: &ListVectorBatch) -> &ColumnVectorBatch;
         #[rust_name = "MapVectorBatch_into_ColumnVectorBatch"]
@@ -196,15 +216,16 @@ pub(crate) mod ffi {
         #[rust_name = "StructVectorBatch_toString"]
         fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "ListVectorBatch_toString"]
-        fn toString(type_: &ListVectorBatch) -> UniquePtr<CxxString>;
+fn toString(type_: &ListVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "MapVectorBatch_toString"]
         fn toString(type_: &MapVectorBatch) -> UniquePtr<CxxString>;
     }
 }
 
-/// Common methods of [`OwnedColumnVectorBatch`] and [`BorrowedColumnVectorBatch`]
-pub trait ColumnVectorBatch {
-    fn inner(&self) -> &ffi::ColumnVectorBatch;
+/// Common methods of [`OwnedColumnVectorBatch`], [`BorrowedColumnVectorBatch`],
+/// and specialized structs of [`BorrowedColumnVectorBatch`].
+pub trait ColumnVectorBatch<'a> {
+    fn inner(&self) -> &'a ffi::ColumnVectorBatch;
 
     fn num_elements(&self) -> u64 {
         ffi::get_numElements(self.inner())
@@ -213,8 +234,19 @@ pub trait ColumnVectorBatch {
     /// If the vector contains any null value, then returns an array of booleans
     /// indicating whether each row is null (and should be skipped when reading
     /// it) or not.
-    ///
-    /// See [`BorrowedColumnVectorBatch::not_null`] to get a slice.
+    fn not_null(&self) -> Option<&'a [i8]> {
+        self.not_null_ptr().map(|not_null| {
+            let num_elements = self
+                .num_elements()
+                .try_into()
+                .expect("could not convert u64 to usize");
+
+            // This is safe because we just checked it is not null
+            unsafe { std::slice::from_raw_parts(not_null.as_ptr(), num_elements) }
+        })
+    }
+
+    /// Same as [`BorrowedColumnVectorBatch::not_null`] but returns a pointer
     fn not_null_ptr(&self) -> Option<ptr::NonNull<i8>> {
         if ffi::get_hasNulls(self.inner()) {
             let not_null = ffi::get_notNull(self.inner()).data();
@@ -233,8 +265,8 @@ pub struct OwnedColumnVectorBatch(pub(crate) UniquePtr<ffi::ColumnVectorBatch>);
 
 impl_debug!(OwnedColumnVectorBatch, ffi::ColumnVectorBatch_toString);
 
-impl ColumnVectorBatch for OwnedColumnVectorBatch {
-    fn inner(&self) -> &ffi::ColumnVectorBatch {
+impl<'a> ColumnVectorBatch<'a> for &'a OwnedColumnVectorBatch {
+    fn inner(&self) -> &'a ffi::ColumnVectorBatch {
         &self.0
     }
 }
@@ -253,28 +285,14 @@ impl_debug!(
     ffi::ColumnVectorBatch_toString
 );
 
-impl<'a> ColumnVectorBatch for BorrowedColumnVectorBatch<'a> {
-    fn inner(&self) -> &ffi::ColumnVectorBatch {
+impl<'a> ColumnVectorBatch<'a> for BorrowedColumnVectorBatch<'a> {
+    fn inner(&self) -> &'a ffi::ColumnVectorBatch {
         self.0
     }
 }
 
-impl<'a> BorrowedColumnVectorBatch<'a> {
-    /// Same as [ColumnVectorBatch::not_null_ptr] but returns a slice.
-    pub fn not_null(&self) -> Option<&'a [i8]> {
-        if ffi::get_hasNulls(self.inner()) {
-            let num_elements = self
-                .num_elements()
-                .try_into()
-                .expect("could not convert u64 to usize");
-            let not_null = ffi::get_notNull(self.inner()).data();
 
-            // This is safe because we just checked it is not null
-            Some(unsafe { std::slice::from_raw_parts(not_null, num_elements) })
-        } else {
-            None
-        }
-    }
+impl<'a> BorrowedColumnVectorBatch<'a> {
     pub fn try_into_longs(&self) -> OrcResult<LongVectorBatch<'a>> {
         ffi::try_into_LongVectorBatch(self.0)
             .map_err(OrcError)
@@ -336,6 +354,7 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
 pub struct StructVectorBatch<'a>(&'a ffi::StructVectorBatch);
 
 impl_debug!(StructVectorBatch<'a>, ffi::StructVectorBatch_toString);
+impl_upcast!(StructVectorBatch<'a>, ffi::StructVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> StructVectorBatch<'a> {
     pub fn fields(&self) -> Vec<BorrowedColumnVectorBatch<'a>> {
@@ -360,14 +379,13 @@ impl<'a> StructVectorBatch<'a> {
 pub struct LongVectorBatch<'a>(&'a ffi::LongVectorBatch);
 
 impl_debug!(LongVectorBatch<'a>, ffi::LongVectorBatch_toString);
+impl_upcast!(LongVectorBatch<'a>, ffi::LongVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> LongVectorBatch<'a> {
     pub fn iter(&self) -> LongVectorBatchIterator {
         let data = ffi::LongVectorBatch_get_data(self.0);
-        let vector_batch =
-            BorrowedColumnVectorBatch(ffi::LongVectorBatch_into_ColumnVectorBatch(&self.0));
-        let num_elements = vector_batch.num_elements();
-        let not_null = vector_batch.not_null_ptr();
+        let num_elements = self.num_elements();
+        let not_null = self.not_null_ptr();
 
         unsafe { LongVectorBatchIterator::new(data, not_null, num_elements) }
     }
@@ -443,6 +461,7 @@ impl<'a> Iterator for LongVectorBatchIterator<'a> {
 pub struct DoubleVectorBatch<'a>(&'a ffi::DoubleVectorBatch);
 
 impl_debug!(DoubleVectorBatch<'a>, ffi::DoubleVectorBatch_toString);
+impl_upcast!(DoubleVectorBatch<'a>, ffi::DoubleVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> DoubleVectorBatch<'a> {
     pub fn iter(&self) -> DoubleVectorBatchIterator {
@@ -513,6 +532,7 @@ impl<'a> Iterator for DoubleVectorBatchIterator<'a> {
 pub struct StringVectorBatch<'a>(&'a ffi::StringVectorBatch);
 
 impl_debug!(StringVectorBatch<'a>, ffi::StringVectorBatch_toString);
+impl_upcast!(StringVectorBatch<'a>, ffi::StringVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> StringVectorBatch<'a> {
     pub fn iter(&self) -> StringVectorBatchIterator {
@@ -589,6 +609,7 @@ impl<'a> Iterator for StringVectorBatchIterator<'a> {
 pub struct TimestampVectorBatch<'a>(&'a ffi::TimestampVectorBatch);
 
 impl_debug!(TimestampVectorBatch<'a>, ffi::TimestampVectorBatch_toString);
+impl_upcast!(TimestampVectorBatch<'a>, ffi::TimestampVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> TimestampVectorBatch<'a> {
     pub fn iter(&self) -> TimestampVectorBatchIterator {
@@ -670,6 +691,7 @@ pub trait DecimalVectorBatch<'a> {
 pub struct Decimal64VectorBatch<'a>(&'a ffi::Decimal64VectorBatch);
 
 impl_debug!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_toString);
+impl_upcast!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_into_ColumnVectorBatch);
 
 impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     type IteratorType = Decimal64VectorBatchIterator<'a>;
@@ -758,6 +780,7 @@ impl_debug!(
     Decimal128VectorBatch<'a>,
     ffi::Decimal128VectorBatch_toString
 );
+impl_upcast!(Decimal128VectorBatch<'a>, ffi::Decimal128VectorBatch_into_ColumnVectorBatch);
 
 impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     type IteratorType = Decimal128VectorBatchIterator<'a>;
@@ -851,6 +874,7 @@ impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
 pub struct ListVectorBatch<'a>(&'a ffi::ListVectorBatch);
 
 impl_debug!(ListVectorBatch<'a>, ffi::ListVectorBatch_toString);
+impl_upcast!(ListVectorBatch<'a>, ffi::ListVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> ListVectorBatch<'a> {
     /// The flat vector of all elements of all lists
@@ -878,6 +902,7 @@ impl<'a> ListVectorBatch<'a> {
 pub struct MapVectorBatch<'a>(&'a ffi::MapVectorBatch);
 
 impl_debug!(MapVectorBatch<'a>, ffi::MapVectorBatch_toString);
+impl_upcast!(MapVectorBatch<'a>, ffi::MapVectorBatch_into_ColumnVectorBatch);
 
 impl<'a> MapVectorBatch<'a> {
     /// The flat vector of all keys of all maps

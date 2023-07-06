@@ -96,7 +96,7 @@ fn read_file() {
     let mut total_elements = 0;
     let mut all_strings: Vec<String> = Vec::new();
     while row_reader.read_into(&mut batch) {
-        total_elements += batch.num_elements();
+        total_elements += (&batch).num_elements();
 
         let struct_vector = batch
             .borrow()
