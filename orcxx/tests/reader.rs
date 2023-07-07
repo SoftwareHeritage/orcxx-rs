@@ -45,8 +45,9 @@ fn nonorc_file() {
 
 #[test]
 fn read_file() {
-    let input_stream = reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
-        .expect("Could not read");
+    let input_stream =
+        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
+            .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let expected_kind = kind::Kind::new(

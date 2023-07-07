@@ -62,7 +62,6 @@ macro_rules! impl_upcast {
                 untyped_vector_batch.0
             }
         }
-
     };
 }
 
@@ -216,7 +215,7 @@ pub(crate) mod ffi {
         #[rust_name = "StructVectorBatch_toString"]
         fn toString(type_: &StructVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "ListVectorBatch_toString"]
-fn toString(type_: &ListVectorBatch) -> UniquePtr<CxxString>;
+        fn toString(type_: &ListVectorBatch) -> UniquePtr<CxxString>;
         #[rust_name = "MapVectorBatch_toString"]
         fn toString(type_: &MapVectorBatch) -> UniquePtr<CxxString>;
     }
@@ -291,7 +290,6 @@ impl<'a> ColumnVectorBatch<'a> for BorrowedColumnVectorBatch<'a> {
     }
 }
 
-
 impl<'a> BorrowedColumnVectorBatch<'a> {
     pub fn try_into_longs(&self) -> OrcResult<LongVectorBatch<'a>> {
         ffi::try_into_LongVectorBatch(self.0)
@@ -354,7 +352,10 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
 pub struct StructVectorBatch<'a>(&'a ffi::StructVectorBatch);
 
 impl_debug!(StructVectorBatch<'a>, ffi::StructVectorBatch_toString);
-impl_upcast!(StructVectorBatch<'a>, ffi::StructVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    StructVectorBatch<'a>,
+    ffi::StructVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> StructVectorBatch<'a> {
     pub fn fields(&self) -> Vec<BorrowedColumnVectorBatch<'a>> {
@@ -379,7 +380,10 @@ impl<'a> StructVectorBatch<'a> {
 pub struct LongVectorBatch<'a>(&'a ffi::LongVectorBatch);
 
 impl_debug!(LongVectorBatch<'a>, ffi::LongVectorBatch_toString);
-impl_upcast!(LongVectorBatch<'a>, ffi::LongVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    LongVectorBatch<'a>,
+    ffi::LongVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> LongVectorBatch<'a> {
     pub fn iter(&self) -> LongVectorBatchIterator {
@@ -461,7 +465,10 @@ impl<'a> Iterator for LongVectorBatchIterator<'a> {
 pub struct DoubleVectorBatch<'a>(&'a ffi::DoubleVectorBatch);
 
 impl_debug!(DoubleVectorBatch<'a>, ffi::DoubleVectorBatch_toString);
-impl_upcast!(DoubleVectorBatch<'a>, ffi::DoubleVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    DoubleVectorBatch<'a>,
+    ffi::DoubleVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> DoubleVectorBatch<'a> {
     pub fn iter(&self) -> DoubleVectorBatchIterator {
@@ -532,7 +539,10 @@ impl<'a> Iterator for DoubleVectorBatchIterator<'a> {
 pub struct StringVectorBatch<'a>(&'a ffi::StringVectorBatch);
 
 impl_debug!(StringVectorBatch<'a>, ffi::StringVectorBatch_toString);
-impl_upcast!(StringVectorBatch<'a>, ffi::StringVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    StringVectorBatch<'a>,
+    ffi::StringVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> StringVectorBatch<'a> {
     pub fn iter(&self) -> StringVectorBatchIterator {
@@ -609,7 +619,10 @@ impl<'a> Iterator for StringVectorBatchIterator<'a> {
 pub struct TimestampVectorBatch<'a>(&'a ffi::TimestampVectorBatch);
 
 impl_debug!(TimestampVectorBatch<'a>, ffi::TimestampVectorBatch_toString);
-impl_upcast!(TimestampVectorBatch<'a>, ffi::TimestampVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    TimestampVectorBatch<'a>,
+    ffi::TimestampVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> TimestampVectorBatch<'a> {
     pub fn iter(&self) -> TimestampVectorBatchIterator {
@@ -691,7 +704,10 @@ pub trait DecimalVectorBatch<'a> {
 pub struct Decimal64VectorBatch<'a>(&'a ffi::Decimal64VectorBatch);
 
 impl_debug!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_toString);
-impl_upcast!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    Decimal64VectorBatch<'a>,
+    ffi::Decimal64VectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     type IteratorType = Decimal64VectorBatchIterator<'a>;
@@ -780,7 +796,10 @@ impl_debug!(
     Decimal128VectorBatch<'a>,
     ffi::Decimal128VectorBatch_toString
 );
-impl_upcast!(Decimal128VectorBatch<'a>, ffi::Decimal128VectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    Decimal128VectorBatch<'a>,
+    ffi::Decimal128VectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     type IteratorType = Decimal128VectorBatchIterator<'a>;
@@ -874,7 +893,10 @@ impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
 pub struct ListVectorBatch<'a>(&'a ffi::ListVectorBatch);
 
 impl_debug!(ListVectorBatch<'a>, ffi::ListVectorBatch_toString);
-impl_upcast!(ListVectorBatch<'a>, ffi::ListVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    ListVectorBatch<'a>,
+    ffi::ListVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> ListVectorBatch<'a> {
     /// The flat vector of all elements of all lists
@@ -902,7 +924,10 @@ impl<'a> ListVectorBatch<'a> {
 pub struct MapVectorBatch<'a>(&'a ffi::MapVectorBatch);
 
 impl_debug!(MapVectorBatch<'a>, ffi::MapVectorBatch_toString);
-impl_upcast!(MapVectorBatch<'a>, ffi::MapVectorBatch_into_ColumnVectorBatch);
+impl_upcast!(
+    MapVectorBatch<'a>,
+    ffi::MapVectorBatch_into_ColumnVectorBatch
+);
 
 impl<'a> MapVectorBatch<'a> {
     /// The flat vector of all keys of all maps
