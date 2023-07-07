@@ -77,7 +77,7 @@ impl OrcDeserializable for i64 {
         mut dst: &'b mut T,
     ) -> Result<(), DeserializationError>
     where
-        &'b mut T: DeserializationTarget<'a, Item = Option<i64>> + 'b,
+        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
     {
         let src = src
             .try_into_longs()
@@ -96,7 +96,7 @@ impl OrcDeserializable for String {
         mut dst: &'b mut T,
     ) -> Result<(), DeserializationError>
     where
-        &'b mut T: DeserializationTarget<'a, Item = Option<String>> + 'b,
+        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
     {
         let src = src
             .try_into_strings()
@@ -110,6 +110,25 @@ impl OrcDeserializable for String {
                         .to_string()
                 ),
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl OrcDeserializable for Vec<u8> {
+    fn read_options_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
+    {
+        let src = src
+            .try_into_strings()
+            .map_err(DeserializationError::MismatchedColumnKind)?;
+        for (s, d) in src.iter().zip(dst.iter_mut()) {
+            *d = s.map(|s| s.to_vec());
         }
 
         Ok(())

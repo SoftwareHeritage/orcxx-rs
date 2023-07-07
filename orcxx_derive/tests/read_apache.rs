@@ -13,6 +13,7 @@ use orcxx_derive::OrcDeserialize;
 #[derive(OrcDeserialize, Default, Debug, PartialEq, Eq)]
 struct Test1 {
     long1: Option<i64>,
+    bytes1: Option<Vec<u8>>,
     string1: Option<String>,
 }
 
@@ -22,8 +23,9 @@ fn test1_option() {
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
-    let options = reader::RowReaderOptions::default().include_names(["long1", "string1"]);
+    let options = reader::RowReaderOptions::default().include_names(["long1", "bytes1", "string1"]);
     let mut row_reader = reader.row_reader(options);
+    println!("{:?}", row_reader.selected_kind());
 
     let mut rows: Vec<Option<Test1>> = Vec::new();
 
@@ -38,10 +40,12 @@ fn test1_option() {
         vec![
             Some(Test1 {
                 long1: Some(9223372036854775807),
+                bytes1: Some(vec![0, 1, 2, 3, 4]),
                 string1: Some("hi".to_owned()),
             }),
             Some(Test1 {
                 long1: Some(9223372036854775807),
+                bytes1: Some(vec![]),
                 string1: Some("bye".to_owned()),
             })
         ]
