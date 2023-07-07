@@ -9,6 +9,7 @@ use std::convert::TryInto;
 use std::iter::Map;
 use std::num::TryFromIntError;
 use std::slice::IterMut;
+use std::str::Utf8Error;
 
 use utils::OrcError;
 use vector::{BorrowedColumnVectorBatch, ColumnVectorBatch, StructVectorBatch};
@@ -27,6 +28,9 @@ pub enum DeserializationError {
     /// [`Vec::from_vector_batch`](OrcDeserializable::from_vector_batch) was called on
     /// a non-empty [`Vec`]
     NonEmptyVector,
+    /// Failed to decode a [`String`] (use [`Vec<u8>`](`Vec`) instead for columns of
+    /// `binary` type).
+    Utf8Error(Utf8Error),
 }
 
 pub trait OrcDeserializable: Sized + Default {
@@ -78,6 +82,32 @@ impl OrcDeserializable for i64 {
     }
 }
 
+impl OrcDeserializable for String {
+    fn read_options_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Option<String>> + 'b,
+    {
+        let src = src
+            .try_into_strings()
+            .map_err(DeserializationError::MismatchedColumnKind)?;
+        for (s, d) in src.iter().zip(dst.iter_mut()) {
+            *d = match s {
+                None => None,
+                Some(s) => Some(
+                    std::str::from_utf8(s)
+                        .map_err(DeserializationError::Utf8Error)?
+                        .to_string()
+                ),
+            }
+        }
+
+        Ok(())
+    }
+}
+
 /// The trait of things that can have ORC data written to them.
 ///
 /// It must be (mutably) iterable, exact-size, and iterable multiple times (one for
@@ -92,7 +122,7 @@ pub trait DeserializationTarget<'a> {
     fn len(&self) -> usize;
     fn iter_mut<'b>(&'b mut self) -> Self::IterMut<'b>;
 
-    fn map<B, F>(self, f: F) -> MultiMap<Self, F>
+    fn map<B, F>(&mut self, f: F) -> MultiMap<Self, F>
     where
         Self: Sized,
         F: FnMut(&mut Self::Item) -> &mut B,
@@ -115,12 +145,12 @@ impl<'a, V: Sized + 'a> DeserializationTarget<'a> for &mut Vec<V> {
 }
 
 /// A map that can be iterated multiple times
-pub struct MultiMap<T: Sized, F> {
-    iter: T,
+pub struct MultiMap<'c, T: Sized, F> {
+    iter: &'c mut T,
     f: F,
 }
 
-impl<'a, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a> for &mut MultiMap<T, F>
+impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a> for &mut MultiMap<'c, T, F>
 where
     F: Copy + for<'b> FnMut(&'b mut V) -> &'b mut V2,
     T: DeserializationTarget<'a, Item = V>,
@@ -175,7 +205,7 @@ mod tests {
         impl OrcDeserializable for Test {
             fn read_options_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
-                dst: &'b mut T,
+                mut dst: &'b mut T,
             ) -> Result<(), DeserializationError>
             where
                 &'b mut T: DeserializationTarget<'a, Item = Option<Test>>,
