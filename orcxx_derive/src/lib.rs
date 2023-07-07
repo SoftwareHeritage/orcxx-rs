@@ -3,7 +3,7 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! Custom `derive` for the [`orcxx`](orcxx) crate, to deserialize `structs` using  Apache ORC C++ library.
+//! Custom `derive` for the `orcxx` crate, to deserialize `structs` using  Apache ORC C++ library.
 //!
 //! # Panics
 //!
