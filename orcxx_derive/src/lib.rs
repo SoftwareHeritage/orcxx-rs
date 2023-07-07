@@ -88,19 +88,66 @@ pub fn orc_deserialize(input: TokenStream) -> TokenStream {
                         .expect("#ident must not have anonymous fields")
                 })
                 .collect(),
+            named.iter().map(|field| &field.ty).collect(),
         ),
         Data::Struct(DataStruct { .. }) => panic!("#ident must have named fields"),
         _ => panic!("#ident must be a structure"),
     }
 }
 
-fn impl_struct(ident: &Ident, field_names: Vec<&Ident>) -> TokenStream {
+fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>) -> TokenStream {
     let num_fields = field_names.len();
 
     let impl_ = quote!(
+        impl ::orcxx::deserialize::CheckableKind for #ident {
+            fn check_kind(kind: &::orcxx::kind::Kind) -> Result<(), String> {
+                use ::orcxx::kind::Kind;
+
+                match kind {
+                    Kind::Struct(fields) => {
+                        let mut fields = fields.iter().enumerate();
+                        let mut errors = Vec::new();
+                        #(
+                            match fields.next() {
+                                Some((i, (field_name, field_type))) => {
+                                    if field_name != stringify!(#field_names) {
+                                        errors.push(format!(
+                                                "Field #{} must be called {}, not {}",
+                                                i, stringify!(#field_names), field_name))
+                                    }
+                                    else if let Err(s) = <#field_types>::check_kind(field_type) {
+                                        errors.push(format!(
+                                            "Field {} cannot be decoded: {}",
+                                            stringify!(#field_names), s));
+                                    }
+                                },
+                                None => errors.push(format!(
+                                    "Field {} is missing",
+                                    stringify!(#field_names)))
+                            }
+                        )*
+
+                        if errors.is_empty() {
+                            Ok(())
+                        }
+                        else {
+                            Err(format!(
+                                "{} cannot be decoded:\n\t{}",
+                                stringify!(#ident),
+                                errors.join("\n").replace("\n", "\n\t")))
+                        }
+                    }
+                    _ => Err(format!(
+                        "{} must be decoded from Kind::Struct, not {:?}",
+                        stringify!(#ident),
+                        kind))
+                }
+            }
+        }
+
         impl ::orcxx::deserialize::OrcDeserializable for #ident {
             fn read_options_from_vector_batch<'a, 'b, T> (
-                src: &orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
+                src: &::orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
             ) -> Result<(), ::orcxx::deserialize::DeserializationError>
             where
                 &'b mut T: ::orcxx::deserialize::DeserializationTarget<'a, Item=Option<#ident>> + 'b {

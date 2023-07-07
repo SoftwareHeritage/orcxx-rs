@@ -6,7 +6,7 @@
 extern crate orcxx;
 extern crate orcxx_derive;
 
-use orcxx::deserialize::OrcDeserializable;
+use orcxx::deserialize::{CheckableKind, OrcDeserializable};
 use orcxx::reader;
 use orcxx_derive::OrcDeserialize;
 
@@ -25,7 +25,7 @@ fn test1_option() {
 
     let options = reader::RowReaderOptions::default().include_names(["long1", "bytes1", "string1"]);
     let mut row_reader = reader.row_reader(options);
-    println!("{:?}", row_reader.selected_kind());
+    Test1::check_kind(&row_reader.selected_kind()).unwrap();
 
     let mut rows: Vec<Option<Test1>> = Vec::new();
 
