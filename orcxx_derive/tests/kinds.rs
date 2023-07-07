@@ -26,7 +26,7 @@ fn incorrect_order() {
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
     let options = reader::RowReaderOptions::default().include_names(["long1", "string1", "bytes1"]);
-    let row_reader = reader.row_reader(options);
+    let row_reader = reader.row_reader(options).unwrap();
     assert_eq!(
         Test1IncorrectOrder::check_kind(&row_reader.selected_kind()),
         Err("Test1IncorrectOrder cannot be decoded:\n\tField #1 must be called string1, not bytes1\n\tField #2 must be called bytes1, not string1".to_string()));
@@ -47,7 +47,7 @@ fn incorrect_type() {
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
     let options = reader::RowReaderOptions::default().include_names(["long1", "bytes1"]);
-    let row_reader = reader.row_reader(options);
+    let row_reader = reader.row_reader(options).unwrap();
     assert_eq!(
         Test1IncorrectType::check_kind(&row_reader.selected_kind()),
         Err("Test1IncorrectType cannot be decoded:\n\tField bytes1 cannot be decoded: String must be decoded from ORC String, not ORC Binary".to_string()));

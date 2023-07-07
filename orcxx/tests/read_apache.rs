@@ -28,7 +28,9 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
-    let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
+    let mut row_reader = reader
+        .row_reader(reader::RowReaderOptions::default())
+        .unwrap();
 
     let mut structured_row_reader = StructuredRowReader::new(&mut row_reader, 1024);
 

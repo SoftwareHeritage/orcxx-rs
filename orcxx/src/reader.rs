@@ -70,7 +70,10 @@ pub(crate) mod ffi {
             options: &ReaderOptions,
         ) -> Result<UniquePtr<Reader>>;
 
-        fn createRowReader(&self, rowReaderOptions: &RowReaderOptions) -> UniquePtr<RowReader>;
+        fn createRowReader(
+            &self,
+            rowReaderOptions: &RowReaderOptions,
+        ) -> Result<UniquePtr<RowReader>>;
 
         fn getType(&self) -> &Type;
     }
@@ -125,8 +128,11 @@ impl Reader {
             .map(Reader)
     }
 
-    pub fn row_reader(&self, options: RowReaderOptions) -> RowReader {
-        RowReader(self.0.createRowReader(&options.0))
+    pub fn row_reader(&self, options: RowReaderOptions) -> OrcResult<RowReader> {
+        self.0
+            .createRowReader(&options.0)
+            .map(RowReader)
+            .map_err(OrcError)
     }
 
     /// Returns the data type of the file being read. This is usually a struct.

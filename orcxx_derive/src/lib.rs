@@ -32,7 +32,7 @@
 //!
 //! // Setup reader (list of columns must match fields in Test1)
 //! let options = reader::RowReaderOptions::default().include_names(["long1"]);
-//! let mut row_reader = reader.row_reader(options);
+//! let mut row_reader = reader.row_reader(options).expect("'long1' is missing from the .orc");
 //!
 //! let mut rows: Vec<Option<Test1>> = Vec::new();
 //!

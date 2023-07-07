@@ -44,6 +44,29 @@ fn nonorc_file() {
 }
 
 #[test]
+fn select_column() {
+    let input_stream =
+        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
+            .expect("Could not read");
+    let reader = reader::Reader::new(input_stream).expect("Could not create reader");
+    let options = reader::RowReaderOptions::default().include_names(vec!["byte1", "string1"]);
+    assert!(matches!(reader.row_reader(options), Ok(_)));
+}
+
+#[test]
+fn select_nonexistent_column() {
+    let input_stream =
+        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
+            .expect("Could not read");
+    let reader = reader::Reader::new(input_stream).expect("Could not create reader");
+    let options = reader::RowReaderOptions::default().include_names(vec!["abc", "def"]);
+    assert!(matches!(
+        reader.row_reader(options),
+        Err(utils::OrcError(_))
+    ));
+}
+
+#[test]
 fn read_file() {
     let input_stream =
         reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
@@ -85,7 +108,9 @@ fn read_file() {
 
     assert_eq!(reader.kind(), expected_kind, "unexpected file structure");
 
-    let mut row_reader = reader.row_reader(reader::RowReaderOptions::default());
+    let mut row_reader = reader
+        .row_reader(reader::RowReaderOptions::default())
+        .unwrap();
     assert_eq!(
         row_reader.selected_kind(),
         expected_kind,
