@@ -25,14 +25,15 @@ pub enum DeserializationError {
     MissingField(String),
     /// u64 could not be converted to usize. Contains the original error
     UsizeOverflow(TryFromIntError),
-    /// [`Vec::from_vector_batch`](OrcDeserializable::from_vector_batch) was called on
-    /// a non-empty [`Vec`]
+    /// [`Vec::from_vector_batch`](OrcDeserializable::options_from_vector_batch) was
+    /// called on a non-empty [`Vec`]
     NonEmptyVector,
     /// Failed to decode a [`String`] (use [`Vec<u8>`](`Vec`) instead for columns of
     /// `binary` type).
     Utf8Error(Utf8Error),
 }
 
+/// Types which can be read in batch from ORC columns ([`BorrowedColumnVectorBatch`]).
 pub trait OrcDeserializable: Sized + Default {
     /*
     fn read_from_vector_batch<'a, T: DeserializationTarget<'a, Inner=Self>>(
@@ -41,6 +42,8 @@ pub trait OrcDeserializable: Sized + Default {
     ) -> Result<(), DeserializationError>;
     */
 
+    /// Reads from a [`BorrowedColumnVectorBatch`] to a structure that behaves like
+    /// a rewindable iterator of `&mut Option<Self>`.
     fn read_options_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         dst: &'b mut T,
@@ -49,6 +52,11 @@ pub trait OrcDeserializable: Sized + Default {
         Self: 'a,
         &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b;
 
+    /// Reads from a [`BorrowedColumnVectorBatch`] and returns a `Vec<Option<Self>>`
+    ///
+    /// This is a wrapper for
+    /// [`read_options_from_vector_batch`](OrcDeserializable::read_options_from_vector_batch)
+    /// which takes care of allocating a buffer, and returns it.
     fn options_from_vector_batch(
         vector_batch: &BorrowedColumnVectorBatch,
     ) -> Result<Vec<Option<Self>>, DeserializationError> {
