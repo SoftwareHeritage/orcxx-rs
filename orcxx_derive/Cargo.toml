@@ -1,0 +1,33 @@
+[package]
+name = "orcxx_derive"
+version = "0.1.0"
+authors = [
+    "Software Heritage developers <swh-devel@inria.fr>"
+]
+rust-version = "1.63"
+description = "Procedural macros to deserialize structures from Apache ORC using orcxx."
+readme = "../README.md"
+homepage = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
+repository = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
+keywords = ["orc", "apache-orc", "proc-macros"]
+categories = ["encoding", "parser-implementations"]
+
+# orcxx itself is GPL.
+#
+# Apache2 for Apache ORC, BSD for protobuf and snappy, Zlib for zlib.
+# See orc/LICENSE for the text of these licenses
+license = "GPL-3.0-or-later"
+
+[lib]
+proc-macro = true
+
+[features]
+chrono = ["dep:chrono"]
+
+[dependencies]
+chrono = { version = "0.4.26", optional = true }
+orcxx = { path = "../orcxx" }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = "2.0"
+unsafe_unwrap = "0.1.0"

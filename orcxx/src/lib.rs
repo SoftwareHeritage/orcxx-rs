@@ -30,6 +30,10 @@
 //! casts the vectors into the right type, recursively, in a
 //! [`ColumnTree`](structured_reader::ColumnTree).
 //!
+//! For row-oriented access, see the `orcxx_derive` crate, which allows
+//! `#[derive(OrcDeserialize)]` on structures in order to deserialize ORC files into
+//! a structure instance for each row.
+//!
 //!
 //! # Panics
 //!
@@ -87,6 +91,7 @@
 
 extern crate cxx;
 
+pub mod deserialize;
 mod int128;
 pub mod kind;
 mod memorypool;

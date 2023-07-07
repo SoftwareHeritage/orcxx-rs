@@ -82,5 +82,7 @@ namespace orcxx_rs {
     typedef orc::DataBuffer<orc::Int128> Int128DataBuffer;
     typedef orc::DataBuffer<double> DoubleDataBuffer;
     typedef orc::ColumnVectorBatch* ColumnVectorBatchPtr;
+
+    typedef std::list<std::string> StringList;
 }
 

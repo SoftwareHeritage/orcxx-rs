@@ -23,6 +23,16 @@ pub(crate) mod ffi {
 
         #[rust_name = "RowReaderOptions_new"]
         fn construct() -> UniquePtr<RowReaderOptions>;
+
+        #[rust_name = "StringList_new"]
+        fn construct() -> UniquePtr<StringList>;
+    }
+
+    #[namespace = "orcxx_rs"]
+    unsafe extern "C++" {
+        type StringList;
+
+        fn push_back(self: Pin<&mut StringList>, value: &CxxString);
     }
 
     // Reimport types from other modules
@@ -36,9 +46,19 @@ pub(crate) mod ffi {
     unsafe extern "C++" {
         type InputStream;
         type ReaderOptions;
-        type RowReaderOptions;
 
         fn readLocalFile(path: &CxxString) -> Result<UniquePtr<InputStream>>;
+    }
+
+    #[namespace = "orc"]
+    unsafe extern "C++" {
+        type RowReaderOptions;
+
+        #[rust_name = "include_names"]
+        fn include<'a>(
+            self: Pin<&'a mut RowReaderOptions>,
+            include: &StringList,
+        ) -> Pin<&'a mut RowReaderOptions>;
     }
 
     #[namespace = "orc"]
@@ -121,6 +141,25 @@ pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);
 impl Default for RowReaderOptions {
     fn default() -> RowReaderOptions {
         RowReaderOptions(ffi::RowReaderOptions_new())
+    }
+}
+
+impl RowReaderOptions {
+    /// For files that have structs as the top-level object, select the fields
+    /// to read by name. By default, all columns are read. This option clears
+    /// any previous setting of the selected columns.
+    pub fn include_names<I, S>(mut self, names: I) -> RowReaderOptions
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let mut cxx_names = ffi::StringList_new();
+        for name in names.into_iter() {
+            let_cxx_string!(cxx_name = name.as_ref());
+            cxx_names.pin_mut().push_back(&cxx_name);
+        }
+        self.0.pin_mut().include_names(&cxx_names);
+        self
     }
 }
 
