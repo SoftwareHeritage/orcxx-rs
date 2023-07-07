@@ -112,87 +112,56 @@ pub trait OrcDeserializable: Sized + Default + CheckableKind {
     }
 }
 
-impl CheckableKind for i64 {
-    fn check_kind(kind: &Kind) -> Result<(), String> {
-        check_kind_equals(kind, &Kind::Long, "i64")
-    }
-}
-
-impl OrcDeserializable for i64 {
-    fn read_options_from_vector_batch<'a, 'b, T>(
-        src: &BorrowedColumnVectorBatch,
-        mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
-    where
-        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
-    {
-        let src = src
-            .try_into_longs()
-            .map_err(DeserializationError::MismatchedColumnKind)?;
-        for (s, d) in src.iter().zip(dst.iter_mut()) {
-            *d = s
-        }
-
-        Ok(())
-    }
-}
-
-impl CheckableKind for String {
-    fn check_kind(kind: &Kind) -> Result<(), String> {
-        check_kind_equals(kind, &Kind::String, "String")
-    }
-}
-
-impl OrcDeserializable for String {
-    fn read_options_from_vector_batch<'a, 'b, T>(
-        src: &BorrowedColumnVectorBatch,
-        mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
-    where
-        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
-    {
-        let src = src
-            .try_into_strings()
-            .map_err(DeserializationError::MismatchedColumnKind)?;
-        for (s, d) in src.iter().zip(dst.iter_mut()) {
-            *d = match s {
-                None => None,
-                Some(s) => Some(
-                    std::str::from_utf8(s)
-                        .map_err(DeserializationError::Utf8Error)?
-                        .to_string(),
-                ),
+macro_rules! impl_scalar {
+    ($ty:ty, $kind:expr, $method:ident) => {
+        impl_scalar!($ty, $kind, $method, |s| Ok(s as $ty));
+    };
+    ($ty:ty, $kind:expr, $method:ident, $cast:expr) => {
+        impl CheckableKind for $ty {
+            fn check_kind(kind: &Kind) -> Result<(), String> {
+                check_kind_equals(kind, &$kind, stringify!($ty))
             }
         }
 
-        Ok(())
-    }
-}
+        impl OrcDeserializable for $ty {
+            fn read_options_from_vector_batch<'a, 'b, T>(
+                src: &BorrowedColumnVectorBatch,
+                mut dst: &'b mut T,
+            ) -> Result<(), DeserializationError>
+            where
+                &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
+            {
+                let src = src
+                    .$method()
+                    .map_err(DeserializationError::MismatchedColumnKind)?;
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    match s {
+                        None => *d = None,
+                        Some(s) => *d = Some(($cast)(s)?),
+                    }
+                }
 
-impl CheckableKind for Vec<u8> {
-    fn check_kind(kind: &Kind) -> Result<(), String> {
-        check_kind_equals(kind, &Kind::Binary, "Vec<u8>")
-    }
-}
-
-impl OrcDeserializable for Vec<u8> {
-    fn read_options_from_vector_batch<'a, 'b, T>(
-        src: &BorrowedColumnVectorBatch,
-        mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
-    where
-        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
-    {
-        let src = src
-            .try_into_strings()
-            .map_err(DeserializationError::MismatchedColumnKind)?;
-        for (s, d) in src.iter().zip(dst.iter_mut()) {
-            *d = s.map(|s| s.to_vec());
+                Ok(())
+            }
         }
-
-        Ok(())
-    }
+    };
 }
+
+impl_scalar!(bool, Kind::Boolean, try_into_longs, |s| Ok(s != 0));
+impl_scalar!(i8, Kind::Byte, try_into_longs);
+impl_scalar!(i16, Kind::Short, try_into_longs);
+impl_scalar!(i32, Kind::Int, try_into_longs);
+impl_scalar!(i64, Kind::Long, try_into_longs);
+impl_scalar!(f32, Kind::Float, try_into_doubles);
+impl_scalar!(f64, Kind::Double, try_into_doubles);
+impl_scalar!(String, Kind::String, try_into_strings, |s| {
+    std::str::from_utf8(s)
+        .map_err(DeserializationError::Utf8Error)
+        .map(|s| s.to_string())
+});
+impl_scalar!(Vec<u8>, Kind::Binary, try_into_strings, |s: &[u8]| Ok(
+    s.to_vec()
+));
 
 /// The trait of things that can have ORC data written to them.
 ///
