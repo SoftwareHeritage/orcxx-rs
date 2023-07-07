@@ -121,7 +121,6 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>) -> TokenStream {
                     #num_fields,
                     "{} has {} fields, but got {} columns.",
                     stringify!(ident), #num_fields, columns.len());
-
                 let mut columns = columns.into_iter();
 
                 let dst_len: u64 = dst.len().try_into().map_err(DeserializationError::UsizeOverflow)?;

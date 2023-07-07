@@ -107,7 +107,7 @@ impl OrcDeserializable for String {
                 Some(s) => Some(
                     std::str::from_utf8(s)
                         .map_err(DeserializationError::Utf8Error)?
-                        .to_string()
+                        .to_string(),
                 ),
             }
         }
@@ -177,7 +177,8 @@ pub struct MultiMap<'c, T: Sized, F> {
     f: F,
 }
 
-impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a> for &mut MultiMap<'c, T, F>
+impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a>
+    for &mut MultiMap<'c, T, F>
 where
     F: Copy + for<'b> FnMut(&'b mut V) -> &'b mut V2,
     T: DeserializationTarget<'a, Item = V>,
