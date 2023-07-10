@@ -41,7 +41,7 @@
 //!
 //! // Read structs until the end
 //! while row_reader.read_into(&mut batch) {
-//!     let new_rows = Test1::options_from_vector_batch(&batch.borrow()).unwrap();
+//!     let new_rows = Option::<Test1>::from_vector_batch(&batch.borrow()).unwrap();
 //!     rows.extend(new_rows);
 //! }
 //!
@@ -102,7 +102,7 @@ pub fn orc_deserialize(input: TokenStream) -> TokenStream {
 fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>) -> TokenStream {
     let num_fields = field_names.len();
 
-    let impl_ = quote!(
+    let check_kind_impl = quote!(
         impl ::orcxx::deserialize::CheckableKind for #ident {
             fn check_kind(kind: &::orcxx::kind::Kind) -> Result<(), String> {
                 use ::orcxx::kind::Kind;
@@ -148,36 +148,80 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                 }
             }
         }
+    );
 
+    let prelude = quote!(
+        extern crate unsafe_unwrap;
+
+        use ::std::convert::TryInto;
+        use ::std::collections::HashMap;
+
+        use ::orcxx::deserialize::DeserializationError;
+        use ::orcxx::deserialize::OrcDeserializable;
+        use ::orcxx::vector::{ColumnVectorBatch, BorrowedColumnVectorBatch};
+        use ::orcxx::deserialize::DeserializationTarget;
+
+        let src = src.try_into_structs().map_err(DeserializationError::MismatchedColumnKind)?;
+        let columns = src.fields();
+        assert_eq!(
+            columns.len(),
+            #num_fields,
+            "{} has {} fields, but got {} columns.",
+            stringify!(ident), #num_fields, columns.len());
+        let mut columns = columns.into_iter();
+
+        let dst_len: u64 = dst.len().try_into().map_err(DeserializationError::UsizeOverflow)?;
+        assert_eq!(
+            src.num_elements(),
+            dst_len);
+    );
+
+    let read_from_vector_batch_impl = quote!(
         impl ::orcxx::deserialize::OrcDeserializable for #ident {
+            fn read_from_vector_batch<'a, 'b, T> (
+                src: &::orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
+            ) -> Result<(), ::orcxx::deserialize::DeserializationError>
+            where
+                &'b mut T: ::orcxx::deserialize::DeserializationTarget<'a, Item=#ident> + 'b {
+                #prelude
+
+                match src.not_null() {
+                    None => {
+                        for struct_ in dst.iter_mut() {
+                            *struct_ = Default::default()
+                        }
+                    },
+                    Some(not_null) => {
+                        for (struct_, &b) in dst.iter_mut().zip(not_null) {
+                            if b != 0 {
+                                *struct_ = Default::default()
+                            }
+                        }
+                    }
+                }
+
+                #(
+                    let column: BorrowedColumnVectorBatch = columns.next().expect(
+                        &format!("Failed to get '{}' column", stringify!(#field_names)));
+                    OrcDeserializable::read_from_vector_batch::<orcxx::deserialize::MultiMap<&mut T, _>>(
+                        &column,
+                        &mut dst.map(|struct_| &mut struct_.#field_names),
+                    )?;
+                )*
+
+                Ok(())
+            }
+        }
+    );
+
+    let read_options_from_vector_batch_impl = quote!(
+        impl ::orcxx::deserialize::OrcDeserializableOption for #ident {
             fn read_options_from_vector_batch<'a, 'b, T> (
                 src: &::orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
             ) -> Result<(), ::orcxx::deserialize::DeserializationError>
             where
                 &'b mut T: ::orcxx::deserialize::DeserializationTarget<'a, Item=Option<#ident>> + 'b {
-                extern crate unsafe_unwrap;
-
-                use ::std::convert::TryInto;
-                use ::std::collections::HashMap;
-
-                use ::orcxx::deserialize::DeserializationError;
-                use ::orcxx::deserialize::OrcDeserializable;
-                use ::orcxx::vector::{ColumnVectorBatch, BorrowedColumnVectorBatch};
-                use ::orcxx::deserialize::DeserializationTarget;
-
-                let src = src.try_into_structs().map_err(DeserializationError::MismatchedColumnKind)?;
-                let columns = src.fields();
-                assert_eq!(
-                    columns.len(),
-                    #num_fields,
-                    "{} has {} fields, but got {} columns.",
-                    stringify!(ident), #num_fields, columns.len());
-                let mut columns = columns.into_iter();
-
-                let dst_len: u64 = dst.len().try_into().map_err(DeserializationError::UsizeOverflow)?;
-                assert_eq!(
-                    src.num_elements(),
-                    dst_len);
+                #prelude
 
                 match src.not_null() {
                     None => {
@@ -197,7 +241,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                 #(
                     let column: BorrowedColumnVectorBatch = columns.next().expect(
                         &format!("Failed to get '{}' column", stringify!(#field_names)));
-                    OrcDeserializable::read_options_from_vector_batch::<orcxx::deserialize::MultiMap<&mut T, _>>(
+                    OrcDeserializable::read_from_vector_batch::<orcxx::deserialize::MultiMap<&mut T, _>>(
                         &column,
                         &mut dst.map(|struct_| &mut unsafe { unsafe_unwrap::UnsafeUnwrap::unsafe_unwrap(struct_.as_mut()) }.#field_names),
                     )?;
@@ -208,5 +252,11 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
         }
     );
 
-    impl_.into()
+    quote!(
+        #check_kind_impl
+
+        #read_from_vector_batch_impl
+        #read_options_from_vector_batch_impl
+    )
+    .into()
 }

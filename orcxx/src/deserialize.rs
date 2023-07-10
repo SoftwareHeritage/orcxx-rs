@@ -28,12 +28,17 @@ pub enum DeserializationError {
     MissingField(String),
     /// u64 could not be converted to usize. Contains the original error
     UsizeOverflow(TryFromIntError),
-    /// [`Vec::from_vector_batch`](OrcDeserializable::options_from_vector_batch) was
+    /// [`Vec::from_vector_batch`](OrcDeserializable::from_vector_batch) was
     /// called on a non-empty [`Vec`]
     NonEmptyVector,
     /// Failed to decode a [`String`] (use [`Vec<u8>`](`Vec`) instead for columns of
     /// `binary` type).
     Utf8Error(Utf8Error),
+    /// [`read_from_vector_batch`](OrcDeserializable::read_from_vector_batch) was called
+    /// as a method on a non-`Option` type, with a column containing nulls as parameter.
+    ///
+    /// Contains a human-readable error.
+    UnexpectedNull(String),
 }
 
 fn check_kind_equals(got_kind: &Kind, expected_kind: &Kind, type_name: &str) -> Result<(), String> {
@@ -70,26 +75,19 @@ impl<T: CheckableKind> CheckableKind for Option<T> {
 
 /// Types which can be read in batch from ORC columns ([`BorrowedColumnVectorBatch`]).
 pub trait OrcDeserializable: Sized + Default + CheckableKind {
-    /*
-    fn read_from_vector_batch<'a, T: DeserializationTarget<'a, Inner=Self>>(
-        src: &BorrowedColumnVectorBatch,
-        dst: T,
-    ) -> Result<(), DeserializationError>;
-    */
-
     /// Reads from a [`BorrowedColumnVectorBatch`] to a structure that behaves like
-    /// a rewindable iterator of `&mut Option<Self>`.
+    /// a rewindable iterator of `&mut Self`.
     ///
     /// Users should call
     /// [`check_kind(row_reader.selected_kind()).unwrap()`](CheckableKind::check_kind)
     /// before calling this function on batches produces by a `row_reader`.
-    fn read_options_from_vector_batch<'a, 'b, T>(
+    fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         dst: &'b mut T,
     ) -> Result<(), DeserializationError>
     where
         Self: 'a,
-        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b;
+        &'b mut T: DeserializationTarget<'a, Item = Self> + 'b;
 
     /// Reads from a [`BorrowedColumnVectorBatch`] and returns a `Vec<Option<Self>>`
     ///
@@ -98,18 +96,18 @@ pub trait OrcDeserializable: Sized + Default + CheckableKind {
     /// before calling this function on batches produces by a `row_reader`.
     ///
     /// This is a wrapper for
-    /// [`read_options_from_vector_batch`](OrcDeserializable::read_options_from_vector_batch)
+    /// [`read_from_vector_batch`](OrcDeserializable::read_from_vector_batch)
     /// which takes care of allocating a buffer, and returns it.
-    fn options_from_vector_batch(
+    fn from_vector_batch(
         vector_batch: &BorrowedColumnVectorBatch,
-    ) -> Result<Vec<Option<Self>>, DeserializationError> {
+    ) -> Result<Vec<Self>, DeserializationError> {
         let num_elements = vector_batch.num_elements();
         let num_elements = num_elements
             .try_into()
             .map_err(DeserializationError::UsizeOverflow)?;
         let mut values = Vec::with_capacity(num_elements);
         values.resize_with(num_elements, Default::default);
-        Self::read_options_from_vector_batch(vector_batch, &mut values)?;
+        Self::read_from_vector_batch(vector_batch, &mut values)?;
         Ok(values)
     }
 }
@@ -126,12 +124,42 @@ macro_rules! impl_scalar {
         }
 
         impl OrcDeserializable for $ty {
-            fn read_options_from_vector_batch<'a, 'b, T>(
+            fn read_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
                 mut dst: &'b mut T,
             ) -> Result<(), DeserializationError>
             where
-                &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
+                &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
+            {
+                if src.not_null().is_some() {
+                    // If it is `Some`, there is at least one null so we are going to
+                    // crash eventually. Exit early to avoid checking every single value
+                    // later.
+                    return Err(DeserializationError::UnexpectedNull(format!(
+                        "{} column contains nulls",
+                        stringify!($ty)
+                    )));
+                }
+                let src = src
+                    .$method()
+                    .map_err(DeserializationError::MismatchedColumnKind)?;
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    // This is safe because we checked above this column contains no
+                    // nulls (`src.not_null().is_some()`), so `s` can't be None.
+                    *d = ($cast)(unsafe { s.unsafe_unwrap() })?
+                }
+
+                Ok(())
+            }
+        }
+
+        impl OrcDeserializable for Option<$ty> {
+            fn read_from_vector_batch<'a, 'b, T>(
+                src: &BorrowedColumnVectorBatch,
+                mut dst: &'b mut T,
+            ) -> Result<(), DeserializationError>
+            where
+                &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
             {
                 let src = src
                     .$method()
@@ -174,9 +202,14 @@ impl<T: CheckableKind> CheckableKind for Vec<T> {
     }
 }
 
-impl<I: OrcDeserializable> OrcDeserializable for Vec<Option<I>>
+/// Deserialization of ORC lists
+///
+/// cannot do `impl<I> OrcDeserializable for Option<Vec<Option<I>>>` because it causes
+/// infinite recursion in the type-checker due to this other implementation being
+/// available: `impl<I: OrcDeserializableOption> OrcDeserializable for Option<I>`.
+impl<I> OrcDeserializableOption for Vec<I>
 where
-    I: std::fmt::Debug,
+    I: Default + OrcDeserializable,
 {
     fn read_options_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
@@ -210,11 +243,8 @@ where
         // Deserialize the inner elements recursively into this temporary buffer.
         // TODO: write them directly to the final location to avoid a copy
         let mut elements = Vec::new();
-        elements.resize_with(num_elements, || None);
-        OrcDeserializable::read_options_from_vector_batch::<Vec<Option<I>>>(
-            &src.elements(),
-            &mut elements,
-        )?;
+        elements.resize_with(num_elements, Default::default);
+        OrcDeserializable::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
 
         let mut elements = elements.into_iter().enumerate();
         let mut dst = dst.iter_mut();
@@ -225,7 +255,7 @@ where
         for offset in offsets {
             // Safe because we checked dst.len() == num_elements, and num_elements
             // is also the size of offsets
-            let dst_item: &mut Option<Vec<Option<I>>> = unsafe { dst.next().unsafe_unwrap() };
+            let dst_item: &mut Option<Vec<I>> = unsafe { dst.next().unsafe_unwrap() };
             match offset {
                 None => *dst_item = None,
                 Some(range) => {
@@ -235,8 +265,7 @@ where
                         last_offset, range.start
                     );
                     // Safe because offset is bounded by num_elements;
-                    let mut array: Vec<Option<I>> =
-                        Vec::with_capacity((range.end - range.start) as usize);
+                    let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
                     loop {
                         match elements.next() {
                             Some((i, item)) => {
@@ -252,6 +281,100 @@ where
                     last_offset = range.end;
                 }
             }
+        }
+        if let Some(_) = elements.next() {
+            panic!("List too long");
+        }
+
+        Ok(())
+    }
+}
+
+/// Deserialization of ORC lists
+impl<I> OrcDeserializable for Vec<I>
+where
+    I: OrcDeserializable,
+{
+    fn read_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
+    {
+        if src.not_null().is_some() {
+            // If it is `Some`, there is at least one null so we are going to
+            // crash eventually. Exit early to avoid checking every single value
+            // later.
+            return Err(DeserializationError::UnexpectedNull(format!(
+                "{} column contains nulls",
+                stringify!($ty)
+            )));
+        }
+
+        let src = src
+            .try_into_lists()
+            .map_err(DeserializationError::MismatchedColumnKind)?;
+
+        let num_lists: usize = src
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+        let num_elements: usize = src
+            .elements()
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+
+        assert_eq!(
+            dst.len(),
+            num_lists,
+            "dst has length {}, expected {}",
+            dst.len(),
+            num_lists
+        );
+
+        // Deserialize the inner elements recursively into this temporary buffer.
+        // TODO: write them directly to the final location to avoid a copy
+        let mut elements = Vec::new();
+        elements.resize_with(num_elements, Default::default);
+        OrcDeserializable::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
+
+        let mut elements = elements.into_iter().enumerate();
+        let mut dst = dst.iter_mut();
+
+        let offsets = src.iter_offsets();
+        let mut last_offset = 0;
+
+        for offset in offsets {
+            // This is safe because we checked above this column contains no
+            // nulls (`offsets.not_null().is_some()`), so `offset` can't be None.
+            let range = unsafe { offset.unsafe_unwrap() };
+
+            // Safe because we checked dst.len() == num_elements, and num_elements
+            // is also the size of offsets
+            let dst_item: &mut Vec<I> = unsafe { dst.next().unsafe_unwrap() };
+
+            assert_eq!(
+                range.start, last_offset,
+                "Non-continuous list (jumped from offset {} to {}",
+                last_offset, range.start
+            );
+            // Safe because offset is bounded by num_elements;
+            let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
+            loop {
+                match elements.next() {
+                    Some((i, item)) => {
+                        array.push(item);
+                        if i == range.end - 1 {
+                            break;
+                        }
+                    }
+                    None => panic!("List too short"),
+                }
+            }
+            *dst_item = array;
+            last_offset = range.end;
         }
         if let Some(_) = elements.next() {
             panic!("List too long");
@@ -342,6 +465,33 @@ pub fn default_option_vec<T: Default>(vector_batch: &StructVectorBatch) -> Vec<O
     }
 }
 
+/// Internal trait to allow implementing OrcDeserializable on `Option<T>` where `T` is
+/// a structure defined in other crates
+pub trait OrcDeserializableOption: Sized + CheckableKind {
+    /// Reads from a [`BorrowedColumnVectorBatch`] to a structure that behaves like
+    /// a rewindable iterator of `&mut Option<Self>`.
+    fn read_options_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        Self: 'a,
+        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b;
+}
+
+impl<I: OrcDeserializableOption> OrcDeserializable for Option<I> {
+    fn read_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
+        I: 'a,
+    {
+        I::read_options_from_vector_batch(src, dst)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,20 +517,20 @@ mod tests {
             }
         }
 
-        impl OrcDeserializable for Test {
-            fn read_options_from_vector_batch<'a, 'b, T>(
+        impl OrcDeserializable for Option<Test> {
+            fn read_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
                 mut dst: &'b mut T,
             ) -> Result<(), DeserializationError>
             where
-                &'b mut T: DeserializationTarget<'a, Item = Option<Test>>,
+                &'b mut T: DeserializationTarget<'a, Item = Self>,
             {
                 let src = src
                     .try_into_structs()
                     .map_err(DeserializationError::MismatchedColumnKind)?;
                 let columns = src.fields();
                 let column: BorrowedColumnVectorBatch = columns.into_iter().next().unwrap();
-                OrcDeserializable::read_options_from_vector_batch::<MultiMap<&mut T, _>>(
+                OrcDeserializable::read_from_vector_batch::<MultiMap<&mut T, _>>(
                     &column,
                     &mut dst.map(|struct_| &mut struct_.as_mut().unwrap().field1),
                 )?;
