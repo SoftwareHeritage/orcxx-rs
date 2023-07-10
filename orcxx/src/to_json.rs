@@ -183,125 +183,40 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
                 }
             }
         }
-        ColumnTree::List {
-            mut offsets,
-            elements,
-        } => {
+        ColumnTree::List { offsets, elements } => {
             let values = columntree_to_json_rows(*elements);
-            let mut arrays: Vec<Option<Vec<_>>> = Vec::new(); // TODO: try to guess the capacity
-
-            let mut next_split = None;
-            loop {
-                let offset = offsets.next();
-                match offset {
-                    // Vector only contains nulls (or is empty)
-                    None => break,
-                    // First values in the vector are nulls
-                    Some(None) => arrays.push(None),
-                    // First non-null value in the vector
-                    Some(Some(first_split)) => {
-                        next_split = Some(first_split as usize);
-                        break;
-                    }
-                }
-            }
-            for (i, value) in values.into_iter().enumerate() {
-                while Some(i) == next_split {
-                    let offset = offsets.next();
-                    match offset {
-                        // Last list of vector
-                        None => {
-                            arrays.push(Some(Vec::new()));
-                            next_split = None
-                        }
-                        // New null value
-                        Some(None) => arrays.push(None),
-                        // New list value
-                        Some(Some(j)) => {
-                            arrays.push(Some(Vec::new()));
-                            next_split = Some(j as usize);
-                        }
-                    }
-                }
-                arrays.last_mut().unwrap().as_mut().unwrap().push(value);
-            }
-
-            // Fill nulls at the end
-            while let Some(_) = next_split {
-                arrays.push(None);
-                next_split = offsets.next().unwrap_or(None).map(|offset| offset as usize);
-            }
-
-            arrays
+            offsets
                 .into_iter()
                 .map(|v| match v {
-                    Some(vec) => JsonValue::Array(vec),
+                    Some(range) => JsonValue::Array(values.get(range).unwrap().to_vec()),
                     None => JsonValue::Null,
                 })
                 .collect()
         }
         ColumnTree::Map {
-            mut offsets,
+            offsets,
             keys,
             elements,
         } => {
-            let keys = columntree_to_json_rows(*keys);
-            let values = columntree_to_json_rows(*elements);
-            let mut maps: Vec<_> = Vec::new(); // TODO: try to guess the capacity
-
-            let mut next_split = None;
-            loop {
-                let offset = offsets.next();
-                match offset {
-                    // Vector only contains nulls (or is empty)
-                    None => break,
-                    // First values in the vector are nulls
-                    Some(None) => maps.push(None),
-                    // First non-null value in the vector
-                    Some(Some(first_split)) => {
-                        next_split = Some(first_split as usize);
-                        break;
-                    }
-                }
-            }
-            for (i, (key, value)) in iter::zip(keys.into_iter(), values.into_iter()).enumerate() {
-                while Some(i) == next_split {
-                    let offset = offsets.next();
-                    match offset {
-                        // Last map of vector
-                        None => {
-                            maps.push(Some(Vec::new()));
-                            next_split = None
-                        }
-                        // New null value
-                        Some(None) => maps.push(None),
-                        // New map value
-                        Some(Some(j)) => {
-                            maps.push(Some(Vec::new()));
-                            next_split = Some(j as usize);
-                        }
-                    }
-                }
-                let mut object = json::object::Object::with_capacity(2);
-                object.insert("key", key);
-                object.insert("value", value);
-                maps.last_mut()
-                    .unwrap()
-                    .as_mut()
-                    .unwrap()
-                    .push(JsonValue::Object(object));
-            }
-
-            // Fill nulls at the end
-            while let Some(_) = next_split {
-                maps.push(None);
-                next_split = offsets.next().unwrap_or(None).map(|offset| offset as usize);
-            }
-
-            maps.into_iter()
-                .map(|o| match o {
+            let keys: Vec<JsonValue> = columntree_to_json_rows(*keys);
+            let values: Vec<JsonValue> = columntree_to_json_rows(*elements);
+            offsets
+                .into_iter()
+                .map(|v| match v {
+                    Some(range) => JsonValue::Array(
+                        std::iter::zip(
+                            keys.get(range.clone()).unwrap(),
+                            values.get(range).unwrap(),
+                        )
+                        .map(|(key, value)| {
+                            let mut object = json::object::Object::with_capacity(2);
+                            object.insert("key", key.clone());
+                            object.insert("value", value.clone());
+                            JsonValue::Object(object)
+                        })
+                        .collect(),
+                    ),
                     None => JsonValue::Null,
-                    Some(o) => JsonValue::Array(o),
                 })
                 .collect()
         }

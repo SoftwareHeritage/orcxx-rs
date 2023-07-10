@@ -72,28 +72,22 @@ pub enum ColumnTree<'a> {
     Date(vector::LongVectorBatch<'a>),
     /// A column of lists
     ///
-    /// The offsets are such that the first list is elements `offsets[0]` (inclusive) to
-    /// `offsets[1]` (exclusive), the second list is elements `offsets[1]` (inclusive)
-    /// to `offsets[2]` (exclusive), etc. and the last list is elements
-    /// `offsets[offsets.len()-1]` to the end.
+    /// The `offsets` are ranges in the `elements` vector.
     ///
     /// None values in `offsets` indicates a null instead of a list.
     ///
     /// Therefore, offsets.collect().len() is exactly the number of lists.
     List {
-        offsets: vector::LongVectorBatchIterator<'a>,
+        offsets: vector::RangeVectorBatchIterator<'a>,
         elements: Box<ColumnTree<'a>>,
     },
     /// A column of maps
     ///
-    /// The offsets are such that the first list is entries `offsets[0]` (inclusive) to
-    /// `offsets[1]` (exclusive), the second list is entries `offsets[1]` (inclusive)
-    /// to `offsets[2]` (exclusive), etc. and the last list is entries
-    /// `offsets[offsets.len()-1]` to the end
+    /// The `offsets` are ranges in the `keys` and `elements` vectors.
     ///
     /// Therefore, offsets.len() is exactly the number of maps.
     Map {
-        offsets: vector::LongVectorBatchIterator<'a>,
+        offsets: vector::RangeVectorBatchIterator<'a>,
         keys: Box<ColumnTree<'a>>,
         elements: Box<ColumnTree<'a>>,
     },

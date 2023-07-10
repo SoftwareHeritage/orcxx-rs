@@ -12,6 +12,7 @@
 use std::convert::TryInto;
 use std::fmt;
 use std::marker::PhantomData;
+use std::ops::Range;
 use std::os::raw::c_char;
 use std::ptr;
 
@@ -906,14 +907,14 @@ impl<'a> ListVectorBatch<'a> {
     }
 
     /// Offset of each ist in the flat vector. None values indicate absent lists
-    pub fn iter_offsets(&self) -> LongVectorBatchIterator<'a> {
+    pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::ListVectorBatch_get_offsets(self.0);
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::ListVectorBatch_into_ColumnVectorBatch(&self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
-        unsafe { LongVectorBatchIterator::new(offsets, not_null, num_elements) }
+        unsafe { RangeVectorBatchIterator::new(offsets, not_null, num_elements) }
     }
 }
 
@@ -943,13 +944,85 @@ impl<'a> MapVectorBatch<'a> {
     }
 
     /// Offset of each ist in the flat vector. None values indicate absent maps
-    pub fn iter_offsets(&self) -> LongVectorBatchIterator<'a> {
+    pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::MapVectorBatch_get_offsets(self.0);
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::MapVectorBatch_into_ColumnVectorBatch(&self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
-        unsafe { LongVectorBatchIterator::new(offsets, not_null, num_elements) }
+        unsafe { RangeVectorBatchIterator::new(offsets, not_null, num_elements) }
+    }
+}
+
+/// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`].
+///
+/// For each ("outer") element in the vector batch, returns either `None` (if it is a
+/// null), or the range of offsets in the `elements` (and optionally `keys`) vectors
+/// where the "inner" elements are found.
+#[derive(Debug, Clone)]
+pub struct RangeVectorBatchIterator<'a> {
+    batch: PhantomData<&'a LongVectorBatch<'a>>,
+    data_index: isize,
+    not_null_index: isize,
+    data: *const i64,
+    not_null: Option<ptr::NonNull<i8>>,
+    num_elements: isize,
+}
+
+impl<'a> RangeVectorBatchIterator<'a> {
+    unsafe fn new(
+        data_buffer: &memorypool::ffi::Int64DataBuffer,
+        not_null: Option<ptr::NonNull<i8>>,
+        num_elements: u64,
+    ) -> RangeVectorBatchIterator<'a> {
+        // TODO: do this once https://github.com/apache/orc/commit/294a5e28f7f0420eb1fdc76dffc33608692c1b20
+        // is released:
+        // assert_eq!(std::mem::size_of(u64)*num_elements, data_buffer.size())
+        RangeVectorBatchIterator {
+            batch: PhantomData,
+            data_index: 0,
+            not_null_index: 0,
+            data: data_buffer.data(),
+            not_null,
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+        }
+    }
+}
+
+impl<'a> Iterator for RangeVectorBatchIterator<'a> {
+    type Item = Option<Range<usize>>;
+
+    fn next(&mut self) -> Option<Option<Range<usize>>> {
+        if self.not_null_index >= self.num_elements {
+            return None;
+        }
+
+        if let Some(not_null) = self.not_null {
+            let not_null = not_null.as_ptr();
+            // This is should be safe because we just checked not_null_index is lower
+            // than self.num_elements, which is the length of 'not_null'
+            if unsafe { *not_null.offset(self.not_null_index) } == 0 {
+                self.not_null_index += 1;
+                return Some(None);
+            }
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array plus the number of nulls that we skipped,
+        // and we checked 'index' is lower than 'num_elements'.
+        let next_datum = unsafe { *self.data.offset(self.data_index + 1) }
+            .try_into()
+            .expect("could not convert i64 to usize");
+
+        // No chek needed as datum can't be larger than next_datum
+        let datum = unsafe { *self.data.offset(self.data_index) } as usize;
+
+        self.not_null_index += 1;
+        self.data_index += 1;
+
+        Some(Some(datum..next_datum))
     }
 }

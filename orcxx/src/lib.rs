@@ -37,9 +37,12 @@
 //!
 //! # Panics
 //!
-//! Never, assuming the underlying C++ library behaves as expected.
+//! May panic when reading vector batches larger than `isize`;
+//! this includes vector batches for variable-sized columns (maps and lists).
+//! This is unlikely to happen on 64-bits machines (they would OOM first).
 //!
-//! C++ exceptions should be converted to Rust [`Result`]s.
+//! Panics may happen when the C++ library doesn't behave as expected, too.
+//! C++ exceptions should be converted to Rust [`Result`]s, though.
 //!
 //! # Examples
 //!
