@@ -73,7 +73,7 @@ use syn::*;
 pub fn orc_deserialize(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    match ast.data {
+    let tokens = match ast.data {
         Data::Struct(DataStruct {
             fields: Fields::Named(FieldsNamed { named, .. }),
             ..
@@ -92,7 +92,11 @@ pub fn orc_deserialize(input: TokenStream) -> TokenStream {
         ),
         Data::Struct(DataStruct { .. }) => panic!("#ident must have named fields"),
         _ => panic!("#ident must be a structure"),
-    }
+    };
+
+    //eprintln!("{}", tokens);
+
+    tokens
 }
 
 fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>) -> TokenStream {

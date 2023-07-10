@@ -93,6 +93,7 @@
 //! ```
 
 extern crate cxx;
+extern crate unsafe_unwrap;
 
 pub mod deserialize;
 mod int128;

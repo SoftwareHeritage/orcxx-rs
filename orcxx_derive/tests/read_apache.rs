@@ -21,6 +21,13 @@ struct Test1 {
     double1: Option<f64>,
     bytes1: Option<Vec<u8>>,
     string1: Option<String>,
+    list: Option<Vec<Option<Test1Item>>>,
+}
+
+#[derive(OrcDeserialize, Default, Debug, PartialEq)]
+struct Test1Item {
+    int1: Option<i32>,
+    string1: Option<String>,
 }
 
 #[test]
@@ -31,6 +38,7 @@ fn test1_option() {
 
     let options = reader::RowReaderOptions::default().include_names([
         "boolean1", "byte1", "short1", "int1", "long1", "float1", "double1", "bytes1", "string1",
+        "list",
     ]);
     let mut row_reader = reader.row_reader(options).unwrap();
     Test1::check_kind(&row_reader.selected_kind()).unwrap();
@@ -56,6 +64,16 @@ fn test1_option() {
                 double1: Some(-15.0),
                 bytes1: Some(vec![0, 1, 2, 3, 4]),
                 string1: Some("hi".to_owned()),
+                list: Some(vec![
+                    Some(Test1Item {
+                        int1: Some(3),
+                        string1: Some("good".to_owned())
+                    }),
+                    Some(Test1Item {
+                        int1: Some(4),
+                        string1: Some("bad".to_owned())
+                    })
+                ]),
             }),
             Some(Test1 {
                 boolean1: Some(true),
@@ -67,6 +85,20 @@ fn test1_option() {
                 double1: Some(-5.0),
                 bytes1: Some(vec![]),
                 string1: Some("bye".to_owned()),
+                list: Some(vec![
+                    Some(Test1Item {
+                        int1: Some(100000000),
+                        string1: Some("cat".to_owned())
+                    }),
+                    Some(Test1Item {
+                        int1: Some(-100000),
+                        string1: Some("in".to_owned())
+                    }),
+                    Some(Test1Item {
+                        int1: Some(1234),
+                        string1: Some("hat".to_owned())
+                    })
+                ]),
             })
         ]
     );

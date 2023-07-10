@@ -5,6 +5,8 @@
 
 //! Helpers for the `orcxx_derive` crate.
 
+use unsafe_unwrap::UnsafeUnwrap;
+
 use std::convert::TryInto;
 use std::iter::Map;
 use std::num::TryFromIntError;
@@ -162,6 +164,102 @@ impl_scalar!(String, Kind::String, try_into_strings, |s| {
 impl_scalar!(Vec<u8>, Kind::Binary, try_into_strings, |s: &[u8]| Ok(
     s.to_vec()
 ));
+
+impl<T: CheckableKind> CheckableKind for Vec<T> {
+    fn check_kind(kind: &Kind) -> Result<(), String> {
+        match kind {
+            Kind::List(inner) => T::check_kind(inner),
+            _ => Err(format!("Must be a List, not {:?}", kind)),
+        }
+    }
+}
+
+impl<I: OrcDeserializable> OrcDeserializable for Vec<Option<I>>
+where
+    I: std::fmt::Debug,
+{
+    fn read_options_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
+    {
+        let src = src
+            .try_into_lists()
+            .map_err(DeserializationError::MismatchedColumnKind)?;
+
+        let num_lists: usize = src
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+        let num_elements: usize = src
+            .elements()
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+
+        assert_eq!(
+            dst.len(),
+            num_lists,
+            "dst has length {}, expected {}",
+            dst.len(),
+            num_lists
+        );
+
+        // Deserialize the inner elements recursively into this temporary buffer.
+        // TODO: write them directly to the final location to avoid a copy
+        let mut elements = Vec::new();
+        elements.resize_with(num_elements, || None);
+        OrcDeserializable::read_options_from_vector_batch::<Vec<Option<I>>>(
+            &src.elements(),
+            &mut elements,
+        )?;
+
+        let mut elements = elements.into_iter().enumerate();
+        let mut dst = dst.iter_mut();
+
+        let offsets = src.iter_offsets();
+        let mut last_offset = 0;
+
+        for offset in offsets {
+            // Safe because we checked dst.len() == num_elements, and num_elements
+            // is also the size of offsets
+            let dst_item: &mut Option<Vec<Option<I>>> = unsafe { dst.next().unsafe_unwrap() };
+            match offset {
+                None => *dst_item = None,
+                Some(range) => {
+                    assert_eq!(
+                        range.start, last_offset,
+                        "Non-continuous list (jumped from offset {} to {}",
+                        last_offset, range.start
+                    );
+                    // Safe because offset is bounded by num_elements;
+                    let mut array: Vec<Option<I>> =
+                        Vec::with_capacity((range.end - range.start) as usize);
+                    loop {
+                        match elements.next() {
+                            Some((i, item)) => {
+                                array.push(item);
+                                if i == range.end - 1 {
+                                    break;
+                                }
+                            }
+                            None => panic!("List too short"),
+                        }
+                    }
+                    *dst_item = Some(array);
+                    last_offset = range.end;
+                }
+            }
+        }
+        if let Some(_) = elements.next() {
+            panic!("List too long");
+        }
+
+        Ok(())
+    }
+}
 
 /// The trait of things that can have ORC data written to them.
 ///
