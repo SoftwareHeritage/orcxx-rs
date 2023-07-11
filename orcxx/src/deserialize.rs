@@ -202,7 +202,80 @@ impl<T: CheckableKind> CheckableKind for Vec<T> {
     }
 }
 
-/// Deserialization of ORC lists
+/// Shared initialization code of `impl<I> OrcDeserializableOption for Vec<I>`
+/// and impl<I> OrcDeserializable for Vec<I>
+macro_rules! init_list_read {
+    ($src:expr, $dst: expr) => {{
+        let src = $src
+            .try_into_lists()
+            .map_err(DeserializationError::MismatchedColumnKind)?;
+
+        let num_lists: usize = src
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+        let num_elements: usize = src
+            .elements()
+            .num_elements()
+            .try_into()
+            .map_err(DeserializationError::UsizeOverflow)?;
+
+        assert_eq!(
+            $dst.len(),
+            num_lists,
+            "dst has length {}, expected {}",
+            $dst.len(),
+            num_lists
+        );
+
+        // Deserialize the inner elements recursively into this temporary buffer.
+        // TODO: write them directly to the final location to avoid a copy
+        let mut elements = Vec::new();
+        elements.resize_with(num_elements, Default::default);
+        OrcDeserializable::read_from_vector_batch::<Vec<I>>(
+            &src.elements(),
+            &mut elements,
+        )?;
+
+        let elements = elements.into_iter().enumerate();
+
+        let offsets = src.iter_offsets();
+
+        (offsets, elements)
+    }}
+}
+
+/// Shared loop code of `impl<I> OrcDeserializableOption for Vec<I>`
+/// and impl<I> OrcDeserializable for Vec<I>
+macro_rules! build_list_item {
+    ($range:expr, $last_offset:expr, $elements:expr) => {{
+        let range = $range;
+        assert_eq!(
+            range.start, $last_offset,
+            "Non-continuous list (jumped from offset {} to {}",
+            $last_offset, range.start
+        );
+        // Safe because offset is bounded by num_elements;
+        let mut array: Vec<I> =
+            Vec::with_capacity((range.end - range.start) as usize);
+        loop {
+            match $elements.next() {
+                Some((i, item)) => {
+                    array.push(item);
+                    if i == range.end - 1 {
+                        break;
+                    }
+                }
+                None => panic!("List too short"),
+            }
+        }
+        $last_offset = range.end;
+        array
+    }}
+}
+
+
+/// Deserialization of ORC lists with nullable values
 ///
 /// cannot do `impl<I> OrcDeserializable for Option<Vec<Option<I>>>` because it causes
 /// infinite recursion in the type-checker due to this other implementation being
@@ -218,38 +291,9 @@ where
     where
         &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
     {
-        let src = src
-            .try_into_lists()
-            .map_err(DeserializationError::MismatchedColumnKind)?;
-
-        let num_lists: usize = src
-            .num_elements()
-            .try_into()
-            .map_err(DeserializationError::UsizeOverflow)?;
-        let num_elements: usize = src
-            .elements()
-            .num_elements()
-            .try_into()
-            .map_err(DeserializationError::UsizeOverflow)?;
-
-        assert_eq!(
-            dst.len(),
-            num_lists,
-            "dst has length {}, expected {}",
-            dst.len(),
-            num_lists
-        );
-
-        // Deserialize the inner elements recursively into this temporary buffer.
-        // TODO: write them directly to the final location to avoid a copy
-        let mut elements = Vec::new();
-        elements.resize_with(num_elements, Default::default);
-        OrcDeserializable::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
-
-        let mut elements = elements.into_iter().enumerate();
+        let (offsets, mut elements) = init_list_read!(src, dst);
         let mut dst = dst.iter_mut();
 
-        let offsets = src.iter_offsets();
         let mut last_offset = 0;
 
         for offset in offsets {
@@ -259,26 +303,7 @@ where
             match offset {
                 None => *dst_item = None,
                 Some(range) => {
-                    assert_eq!(
-                        range.start, last_offset,
-                        "Non-continuous list (jumped from offset {} to {}",
-                        last_offset, range.start
-                    );
-                    // Safe because offset is bounded by num_elements;
-                    let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
-                    loop {
-                        match elements.next() {
-                            Some((i, item)) => {
-                                array.push(item);
-                                if i == range.end - 1 {
-                                    break;
-                                }
-                            }
-                            None => panic!("List too short"),
-                        }
-                    }
-                    *dst_item = Some(array);
-                    last_offset = range.end;
+                    *dst_item = Some(build_list_item!(range, last_offset, elements));
                 }
             }
         }
@@ -290,7 +315,7 @@ where
     }
 }
 
-/// Deserialization of ORC lists
+/// Deserialization of ORC lists without nullable values
 impl<I> OrcDeserializable for Vec<I>
 where
     I: OrcDeserializable,
@@ -312,38 +337,9 @@ where
             )));
         }
 
-        let src = src
-            .try_into_lists()
-            .map_err(DeserializationError::MismatchedColumnKind)?;
-
-        let num_lists: usize = src
-            .num_elements()
-            .try_into()
-            .map_err(DeserializationError::UsizeOverflow)?;
-        let num_elements: usize = src
-            .elements()
-            .num_elements()
-            .try_into()
-            .map_err(DeserializationError::UsizeOverflow)?;
-
-        assert_eq!(
-            dst.len(),
-            num_lists,
-            "dst has length {}, expected {}",
-            dst.len(),
-            num_lists
-        );
-
-        // Deserialize the inner elements recursively into this temporary buffer.
-        // TODO: write them directly to the final location to avoid a copy
-        let mut elements = Vec::new();
-        elements.resize_with(num_elements, Default::default);
-        OrcDeserializable::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
-
-        let mut elements = elements.into_iter().enumerate();
+        let (offsets, mut elements) = init_list_read!(src, dst);
         let mut dst = dst.iter_mut();
 
-        let offsets = src.iter_offsets();
         let mut last_offset = 0;
 
         for offset in offsets {
@@ -355,26 +351,7 @@ where
             // is also the size of offsets
             let dst_item: &mut Vec<I> = unsafe { dst.next().unsafe_unwrap() };
 
-            assert_eq!(
-                range.start, last_offset,
-                "Non-continuous list (jumped from offset {} to {}",
-                last_offset, range.start
-            );
-            // Safe because offset is bounded by num_elements;
-            let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
-            loop {
-                match elements.next() {
-                    Some((i, item)) => {
-                        array.push(item);
-                        if i == range.end - 1 {
-                            break;
-                        }
-                    }
-                    None => panic!("List too short"),
-                }
-            }
-            *dst_item = array;
-            last_offset = range.end;
+            *dst_item = build_list_item!(range, last_offset, elements);
         }
         if let Some(_) = elements.next() {
             panic!("List too long");
