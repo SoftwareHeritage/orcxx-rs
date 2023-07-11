@@ -6,7 +6,7 @@
 extern crate orcxx;
 extern crate orcxx_derive;
 
-use orcxx::deserialize::{CheckableKind, OrcDeserializable};
+use orcxx::deserialize::{CheckableKind, OrcDeserialize};
 use orcxx::reader;
 use orcxx_derive::OrcDeserialize;
 
