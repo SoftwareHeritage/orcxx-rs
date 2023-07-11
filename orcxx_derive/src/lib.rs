@@ -3,11 +3,31 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! Custom `derive` for the `orcxx` crate, to deserialize `structs` using  Apache ORC C++ library.
+//! Custom `derive` for the `orcxx` crate, to deserialize `structs` using Apache ORC C++ library.
+//!
+//! # Supported types
+//!
+//! Structures can have fields of the following types:
+//!
+//! * [`bool`], [`i8`], [`i16`], [`i32`], [`i64`], [`f32`], [`f64`], [`String`], [`Vec<u8>`](Vec),
+//!   mapping to their respective ORC type
+//! * `Vec<T>` when `T` is a supported type, mapping to an ORC list
+//! * `HashMap<K, V>` and `Vec<(K, V)>` are not supported yet to deserialize ORC list
+//!   (see <https://gitlab.softwareheritage.org/swh/devel/orcxx-rs/-/issues/1>)
+//!
+//! # About null values
+//!
+//! In order to support all ORC files, every single type should be wrapped in `Option`
+//! (eg. `struct<a:int, b:list<string>>` in ORC should be
+//! `a: Option<i32>, b: Option<Vec<Option<String>>>`), but this is cumbersome, and
+//! may have high overhead if you need to check it.
+//!
+//! If you omit `Option`, then `orcxx_derive` will return an error early for files
+//! containing null values, and avoid this overhead for files which don't.
 //!
 //! # Panics
 //!
-//! TODO
+//! See `orcxx`'s documentation.
 //!
 //! # Example
 //!
@@ -56,6 +76,35 @@
 //!         })
 //!     ]
 //! );
+//! ```
+//!
+//! It is also possible to nest structures:
+//!
+//! ```
+//! extern crate orcxx;
+//! extern crate orcxx_derive;
+//!
+//! use orcxx_derive::OrcDeserialize;
+//!
+//! #[derive(OrcDeserialize, Default, Debug, PartialEq)]
+//! struct Test1Option {
+//!     boolean1: Option<bool>,
+//!     byte1: Option<i8>,
+//!     short1: Option<i16>,
+//!     int1: Option<i32>,
+//!     long1: Option<i64>,
+//!     float1: Option<f32>,
+//!     double1: Option<f64>,
+//!     bytes1: Option<Vec<u8>>,
+//!     string1: Option<String>,
+//!     list: Option<Vec<Option<Test1ItemOption>>>,
+//! }
+//!
+//! #[derive(OrcDeserialize, Default, Debug, PartialEq)]
+//! struct Test1ItemOption {
+//!     int1: Option<i32>,
+//!     string1: Option<String>,
+//! }
 //! ```
 
 extern crate proc_macro;
