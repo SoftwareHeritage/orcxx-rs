@@ -6,6 +6,9 @@
 /// Converts ORC files to successive JSON objects
 extern crate orcxx;
 
+#[cfg(not(feature = "json"))]
+compile_error!("Feature 'json' must be enabled for this example.");
+
 use std::io::Write;
 use std::{env, io, process};
 
