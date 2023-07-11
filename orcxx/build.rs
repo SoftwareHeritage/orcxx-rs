@@ -25,19 +25,23 @@ fn main() {
 
     if !orc_build_dir.exists() {
         fs::create_dir(orc_build_dir)
-            .expect(&format!("Failed to create {}", orc_build_dir.display()));
+            .unwrap_or_else(|_| panic!("Failed to create {}", orc_build_dir.display()));
     }
 
     let orc_src_include_dir = orc_src_dir.join("c++/include/");
-    let orc_src_include_dir = orc_src_include_dir.to_str().expect(&format!(
-        "Could not convert {} to &str",
-        orc_src_include_dir.display()
-    ));
+    let orc_src_include_dir = orc_src_include_dir.to_str().unwrap_or_else(|| {
+        panic!(
+            "Could not convert {} to &str",
+            orc_src_include_dir.display()
+        )
+    });
     let orc_build_include_dir = orc_build_dir.join("c++/include/");
-    let orc_build_include_dir = orc_build_include_dir.to_str().expect(&format!(
-        "Could not convert {} to &str",
-        orc_build_include_dir.display()
-    ));
+    let orc_build_include_dir = orc_build_include_dir.to_str().unwrap_or_else(|| {
+        panic!(
+            "Could not convert {} to &str",
+            orc_build_include_dir.display()
+        )
+    });
 
     let build = OrcxxBuild {
         orc_src_dir,
@@ -109,10 +113,9 @@ impl<'a> OrcxxBuild<'a> {
     /// Tells rustc where to find the bridge
     fn link_bridge(&self) {
         let liborc_path = self.orc_build_dir.join("c++/src");
-        let liborc_path = liborc_path.to_str().expect(&format!(
-            "Could not convert {} to &str",
-            liborc_path.display()
-        ));
+        let liborc_path = liborc_path
+            .to_str()
+            .unwrap_or_else(|| panic!("Could not convert {} to &str", liborc_path.display()));
         println!("cargo:rustc-link-search={}", liborc_path);
         println!("cargo:rustc-link-lib=orc");
     }
@@ -120,7 +123,7 @@ impl<'a> OrcxxBuild<'a> {
     /// Tells rustc to link dependencies of the C++ code
     fn link_cpp_deps(&self) {
         // FIXME: There should be a way to dynamically find the list of libraries to link to...
-        for (thirdparty_name, thirdparty_libname) in vec![
+        for (thirdparty_name, thirdparty_libname) in &[
             ("lz4", "lz4"),
             ("protobuf", "protobuf"),
             ("snappy", "snappy"),
@@ -131,10 +134,9 @@ impl<'a> OrcxxBuild<'a> {
                 "c++/libs/thirdparty/{}_ep-install/lib",
                 thirdparty_name
             ));
-            let thirdparty_path = thirdparty_path.to_str().expect(&format!(
-                "Could not convert {} to &str",
-                thirdparty_path.display()
-            ));
+            let thirdparty_path = thirdparty_path.to_str().unwrap_or_else(|| {
+                panic!("Could not convert {} to &str", thirdparty_path.display())
+            });
             println!("cargo:rustc-link-search={}", thirdparty_path);
             println!("cargo:rustc-link-lib={}", thirdparty_libname);
         }

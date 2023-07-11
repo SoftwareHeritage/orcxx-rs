@@ -5,6 +5,8 @@
 
 //! Helpers for the `orcxx_derive` crate.
 
+#![allow(clippy::redundant_closure_call)]
+
 use unsafe_unwrap::UnsafeUnwrap;
 
 use std::convert::TryInto;
@@ -232,17 +234,14 @@ macro_rules! init_list_read {
         // TODO: write them directly to the final location to avoid a copy
         let mut elements = Vec::new();
         elements.resize_with(num_elements, Default::default);
-        OrcDeserialize::read_from_vector_batch::<Vec<I>>(
-            &src.elements(),
-            &mut elements,
-        )?;
+        OrcDeserialize::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
 
         let elements = elements.into_iter().enumerate();
 
         let offsets = src.iter_offsets();
 
         (offsets, elements)
-    }}
+    }};
 }
 
 /// Shared loop code of `impl<I> OrcDeserializeOption for Vec<I>`
@@ -256,8 +255,7 @@ macro_rules! build_list_item {
             $last_offset, range.start
         );
         // Safe because offset is bounded by num_elements;
-        let mut array: Vec<I> =
-            Vec::with_capacity((range.end - range.start) as usize);
+        let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
         loop {
             match $elements.next() {
                 Some((i, item)) => {
@@ -271,9 +269,8 @@ macro_rules! build_list_item {
         }
         $last_offset = range.end;
         array
-    }}
+    }};
 }
-
 
 /// Deserialization of ORC lists with nullable values
 ///
@@ -307,7 +304,7 @@ where
                 }
             }
         }
-        if let Some(_) = elements.next() {
+        if elements.next().is_some() {
             panic!("List too long");
         }
 
@@ -353,7 +350,7 @@ where
 
             *dst_item = build_list_item!(range, last_offset, elements);
         }
-        if let Some(_) = elements.next() {
+        if elements.next().is_some() {
             panic!("List too long");
         }
 
@@ -373,7 +370,11 @@ pub trait DeserializationTarget<'a> {
         'a: 'b;
 
     fn len(&self) -> usize;
-    fn iter_mut<'b>(&'b mut self) -> Self::IterMut<'b>;
+    fn iter_mut(&mut self) -> Self::IterMut<'_>;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 
     fn map<B, F>(&mut self, f: F) -> MultiMap<Self, F>
     where
@@ -392,7 +393,7 @@ impl<'a, V: Sized + 'a> DeserializationTarget<'a> for &mut Vec<V> {
         (self as &Vec<_>).len()
     }
 
-    fn iter_mut<'b>(&'b mut self) -> IterMut<'b, V> {
+    fn iter_mut(&mut self) -> IterMut<'_, V> {
         <[_]>::iter_mut(self)
     }
 }
@@ -416,7 +417,7 @@ where
         self.iter.len()
     }
 
-    fn iter_mut<'b>(&'b mut self) -> Map<T::IterMut<'b>, F> {
+    fn iter_mut(&mut self) -> Map<T::IterMut<'_>, F> {
         self.iter.iter_mut().map(self.f)
     }
 }
@@ -430,7 +431,7 @@ pub fn default_option_vec<T: Default>(vector_batch: &StructVectorBatch) -> Vec<O
             .map(|_| Some(Default::default()))
             .collect(),
         Some(not_null) => not_null
-            .into_iter()
+            .iter()
             .map(|&b| {
                 if b == 0 {
                     None

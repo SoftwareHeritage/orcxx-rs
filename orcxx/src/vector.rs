@@ -360,7 +360,7 @@ impl_upcast!(
 
 impl<'a> StructVectorBatch<'a> {
     pub fn fields(&self) -> Vec<BorrowedColumnVectorBatch<'a>> {
-        ffi::StructVectorBatch_get_fields(&self.0)
+        ffi::StructVectorBatch_get_fields(self.0)
             .iter()
             .map(|batch_ptr| {
                 BorrowedColumnVectorBatch(unsafe {
@@ -475,7 +475,7 @@ impl<'a> DoubleVectorBatch<'a> {
     pub fn iter(&self) -> DoubleVectorBatchIterator {
         let data = ffi::DoubleVectorBatch_get_data(self.0).data();
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::DoubleVectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::DoubleVectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -550,7 +550,7 @@ impl<'a> StringVectorBatch<'a> {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
         let lengths = ffi::StringVectorBatch_get_length(self.0).data();
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::StringVectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::StringVectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -630,7 +630,7 @@ impl<'a> TimestampVectorBatch<'a> {
         let data = ffi::TimestampVectorBatch_get_data(self.0).data();
         let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::TimestampVectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::TimestampVectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -724,7 +724,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     fn iter(&self) -> Decimal64VectorBatchIterator<'a> {
         let data = ffi::Decimal64VectorBatch_get_values(self.0).data();
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::Decimal64VectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::Decimal64VectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -816,7 +816,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     fn iter(&self) -> Decimal128VectorBatchIterator<'a> {
         let data = ffi::Decimal128VectorBatch_get_values(self.0).data();
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::Decimal128VectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::Decimal128VectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -910,7 +910,7 @@ impl<'a> ListVectorBatch<'a> {
     pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::ListVectorBatch_get_offsets(self.0);
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::ListVectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::ListVectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 
@@ -947,7 +947,7 @@ impl<'a> MapVectorBatch<'a> {
     pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::MapVectorBatch_get_offsets(self.0);
         let vector_batch =
-            BorrowedColumnVectorBatch(ffi::MapVectorBatch_into_ColumnVectorBatch(&self.0));
+            BorrowedColumnVectorBatch(ffi::MapVectorBatch_into_ColumnVectorBatch(self.0));
         let num_elements = vector_batch.num_elements();
         let not_null = vector_batch.not_null_ptr();
 

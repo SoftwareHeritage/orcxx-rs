@@ -123,7 +123,7 @@ impl Reader {
         input_stream: InputStream,
         options: ReaderOptions,
     ) -> OrcResult<Reader> {
-        ffi::createReader(input_stream.0, &*options.0)
+        ffi::createReader(input_stream.0, &options.0)
             .map_err(OrcError)
             .map(Reader)
     }

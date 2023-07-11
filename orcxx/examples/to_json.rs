@@ -24,11 +24,11 @@ fn to_json(orc_path: &str) {
         .row_reader(reader::RowReaderOptions::default())
         .unwrap();
 
-    let mut structured_row_reader = StructuredRowReader::new(&mut row_reader, 1024);
+    let mut structured_row_reader = StructuredRowReader::new(&mut row_reader, 10240);
 
     while let Some(columns) = structured_row_reader.next() {
         for object in columntree_to_json_rows(columns) {
-            println!("{}", json::stringify_pretty(object, 4));
+            println!("{}", json::stringify(object));
         }
     }
 }
