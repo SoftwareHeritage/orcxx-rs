@@ -72,6 +72,8 @@ impl<'a> OrcxxBuild<'a> {
         let status = process::Command::new("cmake")
             .arg(self.orc_src_dir)
             .arg("-DBUILD_JAVA=OFF")
+            .arg("-DBUILD_TOOLS=OFF")
+            .arg("-DBUILD_CPP_TESTS=OFF")
             .current_dir(self.orc_build_dir)
             .status()
             .expect("failed to run cmake");
