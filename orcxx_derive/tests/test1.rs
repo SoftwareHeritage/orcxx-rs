@@ -107,7 +107,13 @@ fn test1_inner_option_outer_option() {
         rows.extend(new_rows);
     }
 
-    assert_eq!(rows, expected_rows_options().into_iter().map(Some).collect::<Vec<_>>());
+    assert_eq!(
+        rows,
+        expected_rows_options()
+            .into_iter()
+            .map(Some)
+            .collect::<Vec<_>>()
+    );
 }
 
 /// Tests `Test1Option::from_vector_batch()`
@@ -213,7 +219,13 @@ fn test1_inner_nooption_outer_option() {
         rows.extend(new_rows);
     }
 
-    assert_eq!(rows, expected_rows_nooptions().into_iter().map(Some).collect::<Vec<_>>());
+    assert_eq!(
+        rows,
+        expected_rows_nooptions()
+            .into_iter()
+            .map(Some)
+            .collect::<Vec<_>>()
+    );
 }
 
 /// Tests `Test1NoOption::from_vector_batch()`

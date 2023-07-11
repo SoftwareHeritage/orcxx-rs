@@ -232,17 +232,14 @@ macro_rules! init_list_read {
         // TODO: write them directly to the final location to avoid a copy
         let mut elements = Vec::new();
         elements.resize_with(num_elements, Default::default);
-        OrcDeserializable::read_from_vector_batch::<Vec<I>>(
-            &src.elements(),
-            &mut elements,
-        )?;
+        OrcDeserializable::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
 
         let elements = elements.into_iter().enumerate();
 
         let offsets = src.iter_offsets();
 
         (offsets, elements)
-    }}
+    }};
 }
 
 /// Shared loop code of `impl<I> OrcDeserializableOption for Vec<I>`
@@ -256,8 +253,7 @@ macro_rules! build_list_item {
             $last_offset, range.start
         );
         // Safe because offset is bounded by num_elements;
-        let mut array: Vec<I> =
-            Vec::with_capacity((range.end - range.start) as usize);
+        let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
         loop {
             match $elements.next() {
                 Some((i, item)) => {
@@ -271,9 +267,8 @@ macro_rules! build_list_item {
         }
         $last_offset = range.end;
         array
-    }}
+    }};
 }
-
 
 /// Deserialization of ORC lists with nullable values
 ///
