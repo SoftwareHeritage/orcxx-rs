@@ -7,6 +7,7 @@
 
 #![allow(clippy::redundant_closure_call)]
 
+use rust_decimal::Decimal;
 use unsafe_unwrap::UnsafeUnwrap;
 
 use std::convert::TryInto;
@@ -17,7 +18,7 @@ use std::str::Utf8Error;
 
 use kind::Kind;
 use utils::OrcError;
-use vector::{BorrowedColumnVectorBatch, ColumnVectorBatch, StructVectorBatch};
+use vector::{BorrowedColumnVectorBatch, ColumnVectorBatch, DecimalVectorBatch, StructVectorBatch};
 
 #[derive(Debug, PartialEq)]
 pub enum DeserializationError {
@@ -194,6 +195,92 @@ impl_scalar!(String, Kind::String, try_into_strings, |s| {
 impl_scalar!(Vec<u8>, Kind::Binary, try_into_strings, |s: &[u8]| Ok(
     s.to_vec()
 ));
+
+impl CheckableKind for Decimal {
+    fn check_kind(kind: &Kind) -> Result<(), String> {
+        match kind {
+            Kind::Decimal { .. } => Ok(()),
+            _ => Err(format!(
+                "Decimal must be decoded from ORC Decimal, not ORC {:?}",
+                kind
+            )),
+        }
+    }
+}
+
+impl OrcDeserialize for Decimal {
+    fn read_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
+    {
+        if src.not_null().is_some() {
+            // If it is `Some`, there is at least one null so we are going to
+            // crash eventually. Exit early to avoid checking every single value
+            // later.
+            return Err(DeserializationError::UnexpectedNull(
+                "Decimal column contains nulls".to_string(),
+            ));
+        }
+
+        match src.try_into_decimals64() {
+            Ok(src) => {
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    // This is safe because we checked above this column contains no
+                    // nulls (`src.not_null().is_some()`), so `s` can't be None.
+                    *d = unsafe { s.unsafe_unwrap() }
+                }
+            }
+            Err(_) => {
+                let src = src
+                    .try_into_decimals128()
+                    .map_err(DeserializationError::MismatchedColumnKind)?;
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    // Ditto
+                    *d = unsafe { s.unsafe_unwrap() }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl OrcDeserialize for Option<Decimal> {
+    fn read_from_vector_batch<'a, 'b, T>(
+        src: &BorrowedColumnVectorBatch,
+        mut dst: &'b mut T,
+    ) -> Result<(), DeserializationError>
+    where
+        &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
+    {
+        match src.try_into_decimals64() {
+            Ok(src) => {
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    match s {
+                        None => *d = None,
+                        Some(s) => *d = Some(s),
+                    }
+                }
+            }
+            Err(_) => {
+                let src = src
+                    .try_into_decimals128()
+                    .map_err(DeserializationError::MismatchedColumnKind)?;
+                for (s, d) in src.iter().zip(dst.iter_mut()) {
+                    match s {
+                        None => *d = None,
+                        Some(s) => *d = Some(s),
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
 
 impl<T: CheckableKind> CheckableKind for Vec<T> {
     fn check_kind(kind: &Kind) -> Result<(), String> {
