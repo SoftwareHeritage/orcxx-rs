@@ -439,7 +439,14 @@ where
 ///
 /// It must be (mutably) iterable, exact-size, and iterable multiple times (one for
 /// each column it contains).
-pub trait DeserializationTarget<'a> {
+///
+/// # Safety
+///
+/// Implementations returning `len()` values larger than the
+/// actual length of the iterator returned by `iter_mut()` would lead to
+/// undefined behavior (values yielded by the iterator are unwrapped unsafely,
+/// for performance).
+pub unsafe trait DeserializationTarget<'a> {
     type Item: 'a;
     type IterMut<'b>: Iterator<Item = &'b mut Self::Item>
     where
@@ -462,7 +469,7 @@ pub trait DeserializationTarget<'a> {
     }
 }
 
-impl<'a, V: Sized + 'a> DeserializationTarget<'a> for &mut Vec<V> {
+unsafe impl<'a, V: Sized + 'a> DeserializationTarget<'a> for &mut Vec<V> {
     type Item = V;
     type IterMut<'b> = IterMut<'b, V> where V: 'b, 'a: 'b, Self: 'b;
 
@@ -481,7 +488,7 @@ pub struct MultiMap<'c, T: Sized, F> {
     f: F,
 }
 
-impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a>
+unsafe impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a>
     for &mut MultiMap<'c, T, F>
 where
     F: Copy + for<'b> FnMut(&'b mut V) -> &'b mut V2,
