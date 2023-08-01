@@ -134,25 +134,22 @@ macro_rules! impl_scalar {
             where
                 &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
             {
-                if src.not_null().is_some() {
-                    // If it is `Some`, there is at least one null so we are going to
-                    // crash eventually. Exit early to avoid checking every single value
-                    // later.
-                    return Err(DeserializationError::UnexpectedNull(format!(
-                        "{} column contains nulls",
-                        stringify!($ty)
-                    )));
-                }
                 let src = src
                     .$method()
                     .map_err(DeserializationError::MismatchedColumnKind)?;
-                for (s, d) in src.iter().zip(dst.iter_mut()) {
-                    // This is safe because we checked above this column contains no
-                    // nulls (`src.not_null().is_some()`), so `s` can't be None.
-                    *d = ($cast)(unsafe { s.unsafe_unwrap() })?
-                }
+                match src.try_iter_not_null() {
+                    None => Err(DeserializationError::UnexpectedNull(format!(
+                        "{} column contains nulls",
+                        stringify!($ty)
+                    ))),
+                    Some(it) => {
+                        for (s, d) in it.zip(dst.iter_mut()) {
+                            *d = ($cast)(s)?
+                        }
 
-                Ok(())
+                        Ok(())
+                    }
+                }
             }
         }
 
@@ -216,35 +213,35 @@ impl OrcDeserialize for Decimal {
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
     {
-        if src.not_null().is_some() {
-            // If it is `Some`, there is at least one null so we are going to
-            // crash eventually. Exit early to avoid checking every single value
-            // later.
-            return Err(DeserializationError::UnexpectedNull(
-                "Decimal column contains nulls".to_string(),
-            ));
-        }
-
         match src.try_into_decimals64() {
-            Ok(src) => {
-                for (s, d) in src.iter().zip(dst.iter_mut()) {
-                    // This is safe because we checked above this column contains no
-                    // nulls (`src.not_null().is_some()`), so `s` can't be None.
-                    *d = unsafe { s.unsafe_unwrap() }
+            Ok(src) => match src.try_iter_not_null() {
+                None => Err(DeserializationError::UnexpectedNull(
+                    "Decimal column contains nulls".to_string(),
+                )),
+                Some(it) => {
+                    for (s, d) in it.zip(dst.iter_mut()) {
+                        *d = s;
+                    }
+                    Ok(())
                 }
-            }
+            },
             Err(_) => {
                 let src = src
                     .try_into_decimals128()
                     .map_err(DeserializationError::MismatchedColumnKind)?;
-                for (s, d) in src.iter().zip(dst.iter_mut()) {
-                    // Ditto
-                    *d = unsafe { s.unsafe_unwrap() }
+                match src.try_iter_not_null() {
+                    None => Err(DeserializationError::UnexpectedNull(
+                        "Decimal column contains nulls".to_string(),
+                    )),
+                    Some(it) => {
+                        for (s, d) in it.zip(dst.iter_mut()) {
+                            *d = s;
+                        }
+                        Ok(())
+                    }
                 }
             }
         }
-
-        Ok(())
     }
 }
 
@@ -325,9 +322,7 @@ macro_rules! init_list_read {
 
         let elements = elements.into_iter().enumerate();
 
-        let offsets = src.iter_offsets();
-
-        (offsets, elements)
+        (src, elements)
     }};
 }
 
@@ -375,7 +370,8 @@ where
     where
         &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
     {
-        let (offsets, mut elements) = init_list_read!(src, dst);
+        let (src, mut elements) = init_list_read!(src, dst);
+        let offsets = src.iter_offsets();
         let mut dst = dst.iter_mut();
 
         let mut last_offset = 0;
@@ -411,37 +407,31 @@ where
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
     {
-        if src.not_null().is_some() {
-            // If it is `Some`, there is at least one null so we are going to
-            // crash eventually. Exit early to avoid checking every single value
-            // later.
-            return Err(DeserializationError::UnexpectedNull(format!(
+        let (src, mut elements) = init_list_read!(src, dst);
+        match src.try_iter_offsets_not_null() {
+            None => Err(DeserializationError::UnexpectedNull(format!(
                 "{} column contains nulls",
                 stringify!($ty)
-            )));
+            ))),
+            Some(offsets) => {
+                let mut dst = dst.iter_mut();
+
+                let mut last_offset = 0;
+
+                for range in offsets {
+                    // Safe because we checked dst.len() == num_elements, and num_elements
+                    // is also the size of offsets
+                    let dst_item: &mut Vec<I> = unsafe { dst.next().unsafe_unwrap() };
+
+                    *dst_item = build_list_item!(range, last_offset, elements);
+                }
+                if elements.next().is_some() {
+                    panic!("List too long");
+                }
+
+                Ok(())
+            }
         }
-
-        let (offsets, mut elements) = init_list_read!(src, dst);
-        let mut dst = dst.iter_mut();
-
-        let mut last_offset = 0;
-
-        for offset in offsets {
-            // This is safe because we checked above this column contains no
-            // nulls (`offsets.not_null().is_some()`), so `offset` can't be None.
-            let range = unsafe { offset.unsafe_unwrap() };
-
-            // Safe because we checked dst.len() == num_elements, and num_elements
-            // is also the size of offsets
-            let dst_item: &mut Vec<I> = unsafe { dst.next().unsafe_unwrap() };
-
-            *dst_item = build_list_item!(range, last_offset, elements);
-        }
-        if elements.next().is_some() {
-            panic!("List too long");
-        }
-
-        Ok(())
     }
 }
 

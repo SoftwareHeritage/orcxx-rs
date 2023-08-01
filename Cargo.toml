@@ -4,3 +4,7 @@ members = [
     "orcxx",
     "orcxx_derive",
 ]
+
+
+[profile.release]
+debug = 1

@@ -387,6 +387,7 @@ impl_upcast!(
 );
 
 impl<'a> LongVectorBatch<'a> {
+    /// Returns an `Option<u64>` iterator
     pub fn iter(&self) -> LongVectorBatchIterator {
         let data = ffi::LongVectorBatch_get_data(self.0);
         let num_elements = self.num_elements();
@@ -394,9 +395,21 @@ impl<'a> LongVectorBatch<'a> {
 
         unsafe { LongVectorBatchIterator::new(data, not_null, num_elements) }
     }
+
+    /// Returns a `u64` iterator if there are no null values, or `None` if there are
+    pub fn try_iter_not_null(&self) -> Option<NotNullLongVectorBatchIterator> {
+        let data = ffi::LongVectorBatch_get_data(self.0);
+        let num_elements = self.num_elements();
+
+        if self.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(unsafe { NotNullLongVectorBatchIterator::new(data, num_elements) })
+        }
+    }
 }
 
-/// Iterator on [`LongVectorBatch`]
+/// Iterator on [`LongVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct LongVectorBatchIterator<'a> {
     batch: PhantomData<&'a LongVectorBatch<'a>>,
@@ -460,6 +473,53 @@ impl<'a> Iterator for LongVectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`LongVectorBatch`] that may not yield `None`.
+#[derive(Debug, Clone)]
+pub struct NotNullLongVectorBatchIterator<'a> {
+    batch: PhantomData<&'a LongVectorBatch<'a>>,
+    index: isize,
+    data: *const i64,
+    num_elements: isize,
+}
+
+impl<'a> NotNullLongVectorBatchIterator<'a> {
+    unsafe fn new(
+        data_buffer: &memorypool::ffi::Int64DataBuffer,
+        num_elements: u64,
+    ) -> NotNullLongVectorBatchIterator<'a> {
+        // TODO: do this once https://github.com/apache/orc/commit/294a5e28f7f0420eb1fdc76dffc33608692c1b20
+        // is released:
+        // assert_eq!(std::mem::size_of(u64)*num_elements, data_buffer.size())
+        NotNullLongVectorBatchIterator {
+            batch: PhantomData,
+            index: 0,
+            data: data_buffer.data(),
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+        }
+    }
+}
+
+impl<'a> Iterator for NotNullLongVectorBatchIterator<'a> {
+    type Item = i64;
+
+    fn next(&mut self) -> Option<i64> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array,
+        // and we checked 'index' is lower than 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+
+        self.index += 1;
+
+        Some(datum)
+    }
+}
+
 /// A specialized [`ColumnVectorBatch`] whose values are known to be floating-point-like
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
@@ -472,6 +532,7 @@ impl_upcast!(
 );
 
 impl<'a> DoubleVectorBatch<'a> {
+    /// Returns an `Option<f64>` iterator
     pub fn iter(&self) -> DoubleVectorBatchIterator {
         let data = ffi::DoubleVectorBatch_get_data(self.0).data();
         let vector_batch =
@@ -490,9 +551,30 @@ impl<'a> DoubleVectorBatch<'a> {
                 .expect("could not convert u64 to isize"),
         }
     }
+
+    /// Returns a `f64` iterator if there are no null values, or `None` if there are
+    pub fn try_iter_not_null(&self) -> Option<NotNullDoubleVectorBatchIterator> {
+        let data = ffi::DoubleVectorBatch_get_data(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::DoubleVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(NotNullDoubleVectorBatchIterator {
+                batch: PhantomData,
+                index: 0,
+                data,
+                num_elements: num_elements
+                    .try_into()
+                    .expect("could not convert u64 to isize"),
+            })
+        }
+    }
 }
 
-/// Iterator on [`DoubleVectorBatch`]
+/// Iterator on [`DoubleVectorBatch`] that may yield `None`
 #[derive(Debug, Clone)]
 pub struct DoubleVectorBatchIterator<'a> {
     batch: PhantomData<&'a DoubleVectorBatch<'a>>,
@@ -534,6 +616,34 @@ impl<'a> Iterator for DoubleVectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`DoubleVectorBatch`] that may not yield `None`
+#[derive(Debug, Clone)]
+pub struct NotNullDoubleVectorBatchIterator<'a> {
+    batch: PhantomData<&'a DoubleVectorBatch<'a>>,
+    index: isize,
+    data: *const f64,
+    num_elements: isize,
+}
+
+impl<'a> Iterator for NotNullDoubleVectorBatchIterator<'a> {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<f64> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array,
+        // and we checked 'index' is lower than 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+
+        self.index += 1;
+
+        Some(datum)
+    }
+}
+
 /// A specialized [`ColumnVectorBatch`] whose values are known to be string-like.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_strings`]
@@ -546,6 +656,7 @@ impl_upcast!(
 );
 
 impl<'a> StringVectorBatch<'a> {
+    /// Returns an `Option<&[u8]>` iterator
     pub fn iter(&self) -> StringVectorBatchIterator {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
         let lengths = ffi::StringVectorBatch_get_length(self.0).data();
@@ -565,9 +676,32 @@ impl<'a> StringVectorBatch<'a> {
                 .expect("could not convert u64 to isize"),
         }
     }
+
+    /// Returns a `&[u8]` iterator if there are no null values, or `None` if there are
+    pub fn try_iter_not_null(&self) -> Option<NotNullStringVectorBatchIterator> {
+        let data = ffi::StringVectorBatch_get_data(self.0).data();
+        let lengths = ffi::StringVectorBatch_get_length(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::StringVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(NotNullStringVectorBatchIterator {
+                batch: PhantomData,
+                index: 0,
+                data,
+                lengths,
+                num_elements: num_elements
+                    .try_into()
+                    .expect("could not convert u64 to isize"),
+            })
+        }
+    }
 }
 
-/// Iterator on [`StringVectorBatch`]
+/// Iterator on [`StringVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct StringVectorBatchIterator<'a> {
     batch: PhantomData<&'a StringVectorBatch<'a>>,
@@ -613,6 +747,41 @@ impl<'a> Iterator for StringVectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`StringVectorBatch`] that may not yield `None`.
+#[derive(Debug, Clone)]
+pub struct NotNullStringVectorBatchIterator<'a> {
+    batch: PhantomData<&'a StringVectorBatch<'a>>,
+    index: isize,
+    data: *const *mut c_char, // Pointers to start of strings
+    lengths: *const i64,      // Length of each string
+    num_elements: isize,
+}
+
+impl<'a> Iterator for NotNullStringVectorBatchIterator<'a> {
+    type Item = &'a [u8];
+
+    fn next(&mut self) -> Option<&'a [u8]> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // These two should be safe because 'num_elements' should be exactly
+        // the number of element in each array, and we checked 'index' is lower than
+        // 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+        let length = unsafe { *self.lengths.offset(self.index) };
+
+        self.index += 1;
+
+        let length = length.try_into().expect("could not convert u64 to usize");
+
+        // Should be safe because the length indicates the number of bytes in
+        // the string.
+        let datum = datum as *const u8;
+        Some(unsafe { std::slice::from_raw_parts(datum, length) })
+    }
+}
+
 /// A specialized [`ColumnVectorBatch`] whose values are known to be timestamps,
 /// represented by seconds and nanoseconds since 1970-01-01 GMT.
 ///
@@ -626,6 +795,7 @@ impl_upcast!(
 );
 
 impl<'a> TimestampVectorBatch<'a> {
+    /// Returns an `Option<(i64, i64)>` iterator
     pub fn iter(&self) -> TimestampVectorBatchIterator {
         let data = ffi::TimestampVectorBatch_get_data(self.0).data();
         let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
@@ -645,9 +815,32 @@ impl<'a> TimestampVectorBatch<'a> {
                 .expect("could not convert u64 to isize"),
         }
     }
+
+    /// Returns an `(i64, i64)` iterator if there are no null values, or `None` if there are
+    pub fn try_iter_not_null(&self) -> Option<NotNullTimestampVectorBatchIterator> {
+        let data = ffi::TimestampVectorBatch_get_data(self.0).data();
+        let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::TimestampVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(NotNullTimestampVectorBatchIterator {
+                batch: PhantomData,
+                index: 0,
+                data,
+                nanoseconds,
+                num_elements: num_elements
+                    .try_into()
+                    .expect("could not convert u64 to isize"),
+            })
+        }
+    }
 }
 
-/// Iterator on [`TimestampVectorBatch`]
+/// Iterator on [`TimestampVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct TimestampVectorBatchIterator<'a> {
     batch: PhantomData<&'a TimestampVectorBatch<'a>>,
@@ -688,20 +881,52 @@ impl<'a> Iterator for TimestampVectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`TimestampVectorBatch`] that may not yield `None`.
+#[derive(Debug, Clone)]
+pub struct NotNullTimestampVectorBatchIterator<'a> {
+    batch: PhantomData<&'a TimestampVectorBatch<'a>>,
+    index: isize,
+    data: *const i64, // Seconds since 1970-01-01
+    nanoseconds: *const i64,
+    num_elements: isize,
+}
+
+impl<'a> Iterator for NotNullTimestampVectorBatchIterator<'a> {
+    type Item = (i64, i64);
+
+    fn next(&mut self) -> Option<(i64, i64)> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // These two should be safe because 'num_elements' should be exactly
+        // the number of element in each array, and we checked 'index' is lower than
+        // 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+        let nanoseconds = unsafe { *self.nanoseconds.offset(self.index) };
+
+        self.index += 1;
+
+        Some((datum, nanoseconds))
+    }
+}
+
 /// Common methods of [`Decimal64VectorBatch`] and [`Decimal128VectorBatch`]
 pub trait DecimalVectorBatch<'a> {
     type IteratorType: Iterator<Item = Option<Decimal>>;
+    type NotNullIteratorType: Iterator<Item = Decimal>;
 
     /// total number of digits
     fn precision(&self) -> i32;
     /// the number of places after the decimal
     fn scale(&self) -> i32;
     fn iter(&self) -> Self::IteratorType;
+    fn try_iter_not_null(&self) -> Option<Self::NotNullIteratorType>;
 }
 
 /// A specialized [`ColumnVectorBatch`] whose values are known to be 64-bits decimal numbers
 ///
-/// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_decimals64`]
 pub struct Decimal64VectorBatch<'a>(&'a ffi::Decimal64VectorBatch);
 
 impl_debug!(Decimal64VectorBatch<'a>, ffi::Decimal64VectorBatch_toString);
@@ -712,6 +937,7 @@ impl_upcast!(
 
 impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     type IteratorType = Decimal64VectorBatchIterator<'a>;
+    type NotNullIteratorType = NotNullDecimal64VectorBatchIterator<'a>;
 
     fn precision(&self) -> i32 {
         ffi::Decimal64VectorBatch_get_precision(self.0)
@@ -743,9 +969,33 @@ impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
                 .expect("Could not convert scale from i32 to u43"),
         }
     }
+
+    fn try_iter_not_null(&self) -> Option<NotNullDecimal64VectorBatchIterator<'a>> {
+        let data = ffi::Decimal64VectorBatch_get_values(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::Decimal64VectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(NotNullDecimal64VectorBatchIterator {
+                batch: PhantomData,
+                index: 0,
+                data,
+                num_elements: num_elements
+                    .try_into()
+                    .expect("could not convert u64 to isize"),
+                scale: self
+                    .scale()
+                    .try_into()
+                    .expect("Could not convert scale from i32 to u43"),
+            })
+        }
+    }
 }
 
-/// Iterator on [`Decimal64VectorBatch`]
+/// Iterator on [`Decimal64VectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct Decimal64VectorBatchIterator<'a> {
     batch: PhantomData<&'a Decimal64VectorBatch<'a>>,
@@ -788,9 +1038,38 @@ impl<'a> Iterator for Decimal64VectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`Decimal64VectorBatch`] that may not yield `None`.
+#[derive(Debug, Clone)]
+pub struct NotNullDecimal64VectorBatchIterator<'a> {
+    batch: PhantomData<&'a Decimal64VectorBatch<'a>>,
+    index: isize,
+    data: *const i64,
+    num_elements: isize,
+    scale: u32,
+}
+
+impl<'a> Iterator for NotNullDecimal64VectorBatchIterator<'a> {
+    type Item = Decimal;
+
+    fn next(&mut self) -> Option<Decimal> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array,
+        // and we checked 'index' is lower than 'num_elements'.
+        let datum = unsafe { *self.data.offset(self.index) };
+
+        self.index += 1;
+
+        Some(Decimal::new(datum, self.scale))
+    }
+}
+
 /// A specialized [`ColumnVectorBatch`] whose values are known to be 64-bits decimal numbers
 ///
-/// It is constructed through [`BorrowedColumnVectorBatch::try_into_doubles`]
+/// It is constructed through [`BorrowedColumnVectorBatch::try_into_decimals128`]
 pub struct Decimal128VectorBatch<'a>(&'a ffi::Decimal128VectorBatch);
 
 impl_debug!(
@@ -804,6 +1083,7 @@ impl_upcast!(
 
 impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     type IteratorType = Decimal128VectorBatchIterator<'a>;
+    type NotNullIteratorType = NotNullDecimal128VectorBatchIterator<'a>;
 
     fn precision(&self) -> i32 {
         ffi::Decimal128VectorBatch_get_precision(self.0)
@@ -833,6 +1113,30 @@ impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
                 .scale()
                 .try_into()
                 .expect("Could not convert scale from i32 to u43"),
+        }
+    }
+
+    fn try_iter_not_null(&self) -> Option<NotNullDecimal128VectorBatchIterator<'a>> {
+        let data = ffi::Decimal128VectorBatch_get_values(self.0).data();
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::Decimal128VectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(NotNullDecimal128VectorBatchIterator {
+                batch: PhantomData,
+                index: 0,
+                data,
+                num_elements: num_elements
+                    .try_into()
+                    .expect("could not convert u64 to isize"),
+                scale: self
+                    .scale()
+                    .try_into()
+                    .expect("Could not convert scale from i32 to u43"),
+            })
         }
     }
 }
@@ -888,6 +1192,43 @@ impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
     }
 }
 
+/// Iterator on [`Decimal128VectorBatch`] that may not yield `None`
+#[derive(Debug, Clone)]
+pub struct NotNullDecimal128VectorBatchIterator<'a> {
+    batch: PhantomData<&'a Decimal128VectorBatch<'a>>,
+    index: isize,
+    data: *const memorypool::ffi::Int128,
+    num_elements: isize,
+    scale: u32,
+}
+
+impl<'a> Iterator for NotNullDecimal128VectorBatchIterator<'a> {
+    type Item = Decimal;
+
+    fn next(&mut self) -> Option<Decimal> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array,
+        // and we checked 'index' is lower than 'num_elements'.
+        //
+        // We need to do a round-trip of conversion through i128 because Int128 is
+        // opaque, so it is not sized, so .offset() would just return the initial
+        // pointer.
+        let datum = unsafe {
+            &*((self.data as *const i128).offset(self.index) as *const memorypool::ffi::Int128)
+        };
+
+        self.index += 1;
+
+        let datum = (datum.getHighBits() as i128) << 64 | (datum.getLowBits() as i128);
+
+        Some(Decimal::from_i128_with_scale(datum, self.scale))
+    }
+}
+
 /// A specialized [`ColumnVectorBatch`] whose values are lists of other values
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_lists`]
@@ -906,7 +1247,7 @@ impl<'a> ListVectorBatch<'a> {
         BorrowedColumnVectorBatch(ffi::ListVectorBatch_get_elements(self.0))
     }
 
-    /// Offset of each ist in the flat vector. None values indicate absent lists
+    /// Offset of each list in the flat vector. `None` values indicate absent lists
     pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::ListVectorBatch_get_offsets(self.0);
         let vector_batch =
@@ -915,6 +1256,20 @@ impl<'a> ListVectorBatch<'a> {
         let not_null = vector_batch.not_null_ptr();
 
         unsafe { RangeVectorBatchIterator::new(offsets, not_null, num_elements) }
+    }
+
+    /// Offset of each list in the flat vector, or `None` if some lists are absent
+    pub fn try_iter_offsets_not_null(&self) -> Option<NotNullRangeVectorBatchIterator<'a>> {
+        let offsets = ffi::ListVectorBatch_get_offsets(self.0);
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::ListVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(unsafe { NotNullRangeVectorBatchIterator::new(offsets, num_elements) })
+        }
     }
 }
 
@@ -943,7 +1298,7 @@ impl<'a> MapVectorBatch<'a> {
         BorrowedColumnVectorBatch(ffi::MapVectorBatch_get_elements(self.0))
     }
 
-    /// Offset of each ist in the flat vector. None values indicate absent maps
+    /// Offset of each map in the flat vector. `None` values indicate absent maps
     pub fn iter_offsets(&self) -> RangeVectorBatchIterator<'a> {
         let offsets = ffi::MapVectorBatch_get_offsets(self.0);
         let vector_batch =
@@ -953,9 +1308,24 @@ impl<'a> MapVectorBatch<'a> {
 
         unsafe { RangeVectorBatchIterator::new(offsets, not_null, num_elements) }
     }
+
+    /// Offset of each map in the flat vector, `None` if some maps are absent
+    pub fn try_iter_offsets_not_null(&self) -> Option<NotNullRangeVectorBatchIterator<'a>> {
+        let offsets = ffi::MapVectorBatch_get_offsets(self.0);
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::MapVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+
+        if vector_batch.not_null_ptr().is_some() {
+            None
+        } else {
+            Some(unsafe { NotNullRangeVectorBatchIterator::new(offsets, num_elements) })
+        }
+    }
 }
 
-/// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`].
+/// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`],
+/// which may yield `None`.
 ///
 /// For each ("outer") element in the vector batch, returns either `None` (if it is a
 /// null), or the range of offsets in the `elements` (and optionally `keys`) vectors
@@ -1024,5 +1394,62 @@ impl<'a> Iterator for RangeVectorBatchIterator<'a> {
         self.data_index += 1;
 
         Some(Some(datum..next_datum))
+    }
+}
+
+/// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`],
+/// which may not yield `None`.
+///
+/// For each ("outer") element in the vector batch, returns the range of offsets
+/// in the `elements` (and optionally `keys`) vectors where the "inner" elements
+/// are found.
+#[derive(Debug, Clone)]
+pub struct NotNullRangeVectorBatchIterator<'a> {
+    batch: PhantomData<&'a LongVectorBatch<'a>>,
+    index: isize,
+    data: *const i64,
+    num_elements: isize,
+}
+
+impl<'a> NotNullRangeVectorBatchIterator<'a> {
+    unsafe fn new(
+        data_buffer: &memorypool::ffi::Int64DataBuffer,
+        num_elements: u64,
+    ) -> NotNullRangeVectorBatchIterator<'a> {
+        // TODO: do this once https://github.com/apache/orc/commit/294a5e28f7f0420eb1fdc76dffc33608692c1b20
+        // is released:
+        // assert_eq!(std::mem::size_of(u64)*num_elements, data_buffer.size())
+        NotNullRangeVectorBatchIterator {
+            batch: PhantomData,
+            index: 0,
+            data: data_buffer.data(),
+            num_elements: num_elements
+                .try_into()
+                .expect("could not convert u64 to isize"),
+        }
+    }
+}
+
+impl<'a> Iterator for NotNullRangeVectorBatchIterator<'a> {
+    type Item = Range<usize>;
+
+    fn next(&mut self) -> Option<Range<usize>> {
+        if self.index >= self.num_elements {
+            return None;
+        }
+
+        // This should be safe because 'num_elements' should be exactly
+        // the number of element in the array,
+        // and we checked 'index' is lower than 'num_elements'.
+        let next_datum = unsafe { *self.data.offset(self.index + 1) }
+            .try_into()
+            .expect("could not convert i64 to usize");
+
+        // No chek needed as datum can't be larger than next_datum
+        let datum = unsafe { *self.data.offset(self.index) } as usize;
+
+        self.index += 1;
+
+        Some(datum..next_datum)
     }
 }
