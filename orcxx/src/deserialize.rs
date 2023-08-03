@@ -8,7 +8,7 @@
 #![allow(clippy::redundant_closure_call)]
 
 use rust_decimal::Decimal;
-use unsafe_unwrap::UnsafeUnwrap;
+pub use unsafe_unwrap::UnsafeUnwrap;
 
 use std::convert::TryInto;
 use std::iter::Map;

@@ -111,7 +111,6 @@ extern crate proc_macro;
 extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
-extern crate unsafe_unwrap;
 
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
@@ -202,8 +201,6 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
     );
 
     let prelude = quote!(
-        extern crate unsafe_unwrap;
-
         use ::std::convert::TryInto;
         use ::std::collections::HashMap;
 
@@ -292,9 +289,9 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                 #(
                     let column: BorrowedColumnVectorBatch = columns.next().expect(
                         &format!("Failed to get '{}' column", stringify!(#field_names)));
-                    OrcDeserialize::read_from_vector_batch::<orcxx::deserialize::MultiMap<&mut T, _>>(
+                    OrcDeserialize::read_from_vector_batch::<::orcxx::deserialize::MultiMap<&mut T, _>>(
                         &column,
-                        &mut dst.map(|struct_| &mut unsafe { unsafe_unwrap::UnsafeUnwrap::unsafe_unwrap(struct_.as_mut()) }.#field_names),
+                        &mut dst.map(|struct_| &mut unsafe { ::orcxx::deserialize::UnsafeUnwrap::unsafe_unwrap(struct_.as_mut()) }.#field_names),
                     )?;
                 )*
 
