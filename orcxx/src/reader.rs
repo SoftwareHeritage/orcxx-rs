@@ -155,6 +155,13 @@ impl Reader {
     pub fn stripes(&self) -> impl Iterator<Item = StripeInformation> + '_ {
         (0..self.0.getNumberOfStripes()).map(move |i| StripeInformation(self.0.getStripe(i)))
     }
+
+    /// Returns the total number of rows in the file
+    pub fn row_count(&self) -> u64 {
+        self.stripes()
+            .map(|stripe| stripe.rows_count())
+            .sum::<u64>()
+    }
 }
 
 /// Options passed to [`Reader::row_reader`]

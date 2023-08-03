@@ -70,13 +70,7 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
         assert!(lines == expected_lines);
     }
 
-    assert_eq!(
-        reader
-            .stripes()
-            .map(|stripe| stripe.rows_count())
-            .sum::<u64>(),
-        objects_count as u64
-    );
+    assert_eq!(reader.row_count(), objects_count as u64);
 }
 
 macro_rules! test_apache_file {
