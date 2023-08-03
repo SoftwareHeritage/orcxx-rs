@@ -45,6 +45,8 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
         .read_to_string(&mut expected_json)
         .expect("Could not read .jsn.gz");
 
+    let objects_count = objects.len();
+
     // Reencode the input to normalize it
     let expected_lines = expected_json
         .split("\n")
@@ -67,6 +69,14 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
         // and it's unreadable anyway
         assert!(lines == expected_lines);
     }
+
+    assert_eq!(
+        reader
+            .stripes()
+            .map(|stripe| stripe.rows_count())
+            .sum::<u64>(),
+        objects_count as u64
+    );
 }
 
 macro_rules! test_apache_file {

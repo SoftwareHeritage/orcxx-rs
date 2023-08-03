@@ -76,6 +76,9 @@ pub(crate) mod ffi {
         ) -> Result<UniquePtr<RowReader>>;
 
         fn getType(&self) -> &Type;
+
+        fn getNumberOfStripes(&self) -> u64;
+        fn getStripe(&self, stripeIndex: u64) -> UniquePtr<StripeInformation>;
     }
 
     #[namespace = "orc"]
@@ -87,6 +90,14 @@ pub(crate) mod ffi {
         fn next(self: Pin<&mut RowReader>, data: Pin<&mut ColumnVectorBatch>) -> bool;
 
         fn getSelectedType(&self) -> &Type;
+    }
+
+    #[namespace = "orc"]
+    unsafe extern "C++" {
+        type StripeInformation;
+
+        fn getLength(&self) -> u64;
+        fn getNumberOfRows(&self) -> u64;
     }
 }
 
@@ -138,6 +149,11 @@ impl Reader {
     /// Returns the data type of the file being read. This is usually a struct.
     pub fn kind(&self) -> kind::Kind {
         kind::Kind::new_from_orc_type(self.0.getType())
+    }
+
+    /// Returns an iterator of [`StripeInformation`]
+    pub fn stripes(&self) -> impl Iterator<Item = StripeInformation> + '_ {
+        (0..self.0.getNumberOfStripes()).map(move |i| StripeInformation(self.0.getStripe(i)))
     }
 }
 
@@ -192,5 +208,20 @@ impl RowReader {
     /// Otherwise this is usually a subset [`Reader::kind`].
     pub fn selected_kind(&self) -> kind::Kind {
         kind::Kind::new_from_orc_type(self.0.getSelectedType())
+    }
+}
+
+/// Metadata about a stripe (a bunch of rows) of an ORC file.
+pub struct StripeInformation(UniquePtr<ffi::StripeInformation>);
+
+impl StripeInformation {
+    /// Returns the stripe's size in bytes
+    pub fn bytes_count(&self) -> u64 {
+        self.0.getLength()
+    }
+
+    /// Returns the number of rows in the stripe
+    pub fn rows_count(&self) -> u64 {
+        self.0.getNumberOfRows()
     }
 }
