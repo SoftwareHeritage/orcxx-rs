@@ -219,16 +219,16 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
         let mut columns = columns.into_iter();
 
         let dst_len: u64 = dst.len().try_into().map_err(DeserializationError::UsizeOverflow)?;
-        assert_eq!(
-            src.num_elements(),
-            dst_len);
+        if src.num_elements() > dst_len {
+            return Err(::orcxx::deserialize::DeserializationError::MismatchedLength { src: src.num_elements(), dst: dst_len });
+        }
     );
 
     let read_from_vector_batch_impl = quote!(
         impl ::orcxx::deserialize::OrcDeserialize for #ident {
             fn read_from_vector_batch<'a, 'b, T> (
                 src: &::orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
-            ) -> Result<(), ::orcxx::deserialize::DeserializationError>
+            ) -> Result<usize, ::orcxx::deserialize::DeserializationError>
             where
                 &'b mut T: ::orcxx::deserialize::DeserializationTarget<'a, Item=#ident> + 'b {
                 #prelude
@@ -257,7 +257,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                     )?;
                 )*
 
-                Ok(())
+                Ok(src.num_elements().try_into().unwrap())
             }
         }
     );
@@ -266,7 +266,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
         impl ::orcxx::deserialize::OrcDeserializeOption for #ident {
             fn read_options_from_vector_batch<'a, 'b, T> (
                 src: &::orcxx::vector::BorrowedColumnVectorBatch, mut dst: &'b mut T
-            ) -> Result<(), ::orcxx::deserialize::DeserializationError>
+            ) -> Result<usize, ::orcxx::deserialize::DeserializationError>
             where
                 &'b mut T: ::orcxx::deserialize::DeserializationTarget<'a, Item=Option<#ident>> + 'b {
                 #prelude
@@ -295,7 +295,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                     )?;
                 )*
 
-                Ok(())
+                Ok(src.num_elements().try_into().unwrap())
             }
         }
     );

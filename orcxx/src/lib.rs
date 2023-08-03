@@ -33,13 +33,19 @@
 //! For row-oriented access, see the `orcxx_derive` crate, which allows
 //! `#[derive(OrcDeserialize)]` on structures in order to deserialize ORC files into
 //! a structure instance for each row.
-//!
+//! These structures can be deserialized either directly into vector batches with
+//! [`deserialize::OrcDeserialize::read_from_vector_batch`], or iterated through
+//! [`row_iterator::RowIterator`].
 //!
 //! # Panics
 //!
-//! May panic when reading vector batches larger than `isize`;
+//! May panic when requesting vector batches larger than `isize`;
 //! this includes vector batches for variable-sized columns (maps and lists).
 //! This is unlikely to happen on 64-bits machines (they would OOM first).
+//!
+//! [`row_iterator::RowIterator`] panics when underlying calls to
+//! [`deserialize::OrcDeserialize::read_from_vector_batch`] error (so you may want to
+//! avoid the former when working with non-trusted data).
 //!
 //! Panics may happen when the C++ library doesn't behave as expected, too.
 //! C++ exceptions should be converted to Rust [`Result`]s, though.
@@ -100,6 +106,7 @@ mod int128;
 pub mod kind;
 mod memorypool;
 pub mod reader;
+pub mod row_iterator;
 pub mod structured_reader;
 pub mod utils;
 pub mod vector;

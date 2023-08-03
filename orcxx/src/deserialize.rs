@@ -37,11 +37,15 @@ pub enum DeserializationError {
     /// Failed to decode a [`String`] (use [`Vec<u8>`](`Vec`) instead for columns of
     /// `binary` type).
     Utf8Error(Utf8Error),
-    /// [`read_from_vector_batch`](OrcDeserialize::read_from_vector_batch) was called
+    /// [`read_from_vector_batch`](OrcDeserialize::read_from_vector_batch) or
+    /// [`from_vector_batch`](OrcDeserialize::from_vector_batch) orwas called
     /// as a method on a non-`Option` type, with a column containing nulls as parameter.
     ///
     /// Contains a human-readable error.
     UnexpectedNull(String),
+    /// [`read_from_vector_batch`](OrcDeserialize::read_from_vector_batch) was given
+    /// a `src` column batch longer than its a `dst` vector.
+    MismatchedLength { src: u64, dst: u64 },
 }
 
 fn check_kind_equals(got_kind: &Kind, expected_kind: &Kind, type_name: &str) -> Result<(), String> {
@@ -79,7 +83,10 @@ impl<T: CheckableKind> CheckableKind for Option<T> {
 /// Types which can be read in batch from ORC columns ([`BorrowedColumnVectorBatch`]).
 pub trait OrcDeserialize: Sized + Default + CheckableKind {
     /// Reads from a [`BorrowedColumnVectorBatch`] to a structure that behaves like
-    /// a rewindable iterator of `&mut Self`.
+    /// a rewindable iterator of `&mut Self`, and returns the number of rows written.
+    ///
+    /// If the number of rows written is strictly smaller than `dst`'s size, then
+    /// **elements at the end of the `dst` are left unchanged**.
     ///
     /// Users should call
     /// [`check_kind(row_reader.selected_kind()).unwrap()`](CheckableKind::check_kind)
@@ -87,7 +94,7 @@ pub trait OrcDeserialize: Sized + Default + CheckableKind {
     fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         Self: 'a,
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b;
@@ -130,7 +137,7 @@ macro_rules! impl_scalar {
             fn read_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
                 mut dst: &'b mut T,
-            ) -> Result<(), DeserializationError>
+            ) -> Result<usize, DeserializationError>
             where
                 &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
             {
@@ -147,7 +154,7 @@ macro_rules! impl_scalar {
                             *d = ($cast)(s)?
                         }
 
-                        Ok(())
+                        Ok(src.num_elements().try_into().unwrap())
                     }
                 }
             }
@@ -157,7 +164,7 @@ macro_rules! impl_scalar {
             fn read_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
                 mut dst: &'b mut T,
-            ) -> Result<(), DeserializationError>
+            ) -> Result<usize, DeserializationError>
             where
                 &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
             {
@@ -171,7 +178,7 @@ macro_rules! impl_scalar {
                     }
                 }
 
-                Ok(())
+                Ok(src.num_elements().try_into().unwrap())
             }
         }
     };
@@ -209,20 +216,21 @@ impl OrcDeserialize for Decimal {
     fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
     {
         match src.try_into_decimals64() {
             Ok(src) => match src.try_iter_not_null() {
-                None => Err(DeserializationError::UnexpectedNull(
-                    "Decimal column contains nulls".to_string(),
-                )),
+                None => {
+                    return Err(DeserializationError::UnexpectedNull(
+                        "Decimal column contains nulls".to_string(),
+                    ))
+                }
                 Some(it) => {
                     for (s, d) in it.zip(dst.iter_mut()) {
                         *d = s;
                     }
-                    Ok(())
                 }
             },
             Err(_) => {
@@ -230,18 +238,21 @@ impl OrcDeserialize for Decimal {
                     .try_into_decimals128()
                     .map_err(DeserializationError::MismatchedColumnKind)?;
                 match src.try_iter_not_null() {
-                    None => Err(DeserializationError::UnexpectedNull(
-                        "Decimal column contains nulls".to_string(),
-                    )),
+                    None => {
+                        return Err(DeserializationError::UnexpectedNull(
+                            "Decimal column contains nulls".to_string(),
+                        ))
+                    }
                     Some(it) => {
                         for (s, d) in it.zip(dst.iter_mut()) {
                             *d = s;
                         }
-                        Ok(())
                     }
                 }
             }
         }
+
+        Ok(src.num_elements().try_into().unwrap())
     }
 }
 
@@ -249,7 +260,7 @@ impl OrcDeserialize for Option<Decimal> {
     fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
     {
@@ -275,7 +286,7 @@ impl OrcDeserialize for Option<Decimal> {
             }
         }
 
-        Ok(())
+        Ok(src.num_elements().try_into().unwrap())
     }
 }
 
@@ -306,13 +317,12 @@ macro_rules! init_list_read {
             .try_into()
             .map_err(DeserializationError::UsizeOverflow)?;
 
-        assert_eq!(
-            $dst.len(),
-            num_lists,
-            "dst has length {}, expected {}",
-            $dst.len(),
-            num_lists
-        );
+        if num_lists > $dst.len() {
+            return Err(DeserializationError::MismatchedLength {
+                src: num_lists as u64,
+                dst: $dst.len() as u64,
+            });
+        }
 
         // Deserialize the inner elements recursively into this temporary buffer.
         // TODO: write them directly to the final location to avoid a copy
@@ -366,7 +376,7 @@ where
     fn read_options_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b,
     {
@@ -391,7 +401,7 @@ where
             panic!("List too long");
         }
 
-        Ok(())
+        Ok(src.num_elements().try_into().unwrap())
     }
 }
 
@@ -403,7 +413,7 @@ where
     fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         mut dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
     {
@@ -429,7 +439,7 @@ where
                     panic!("List too long");
                 }
 
-                Ok(())
+                Ok(src.num_elements().try_into().unwrap())
             }
         }
     }
@@ -535,7 +545,7 @@ pub trait OrcDeserializeOption: Sized + CheckableKind {
     fn read_options_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         Self: 'a,
         &'b mut T: DeserializationTarget<'a, Item = Option<Self>> + 'b;
@@ -545,7 +555,7 @@ impl<I: OrcDeserializeOption> OrcDeserialize for Option<I> {
     fn read_from_vector_batch<'a, 'b, T>(
         src: &BorrowedColumnVectorBatch,
         dst: &'b mut T,
-    ) -> Result<(), DeserializationError>
+    ) -> Result<usize, DeserializationError>
     where
         &'b mut T: DeserializationTarget<'a, Item = Self> + 'b,
         I: 'a,

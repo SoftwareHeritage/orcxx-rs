@@ -6,11 +6,14 @@
 extern crate orcxx;
 extern crate orcxx_derive;
 
+use std::convert::TryInto;
+
 use orcxx::deserialize::{CheckableKind, OrcDeserialize};
 use orcxx::reader;
+use orcxx::row_iterator::RowIterator;
 use orcxx_derive::OrcDeserialize;
 
-fn row_reader() -> reader::RowReader {
+fn get_row_reader() -> reader::RowReader {
     let orc_path = "../orc/examples/TestOrcFile.test1.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
@@ -22,7 +25,7 @@ fn row_reader() -> reader::RowReader {
     reader.row_reader(options).unwrap()
 }
 
-#[derive(OrcDeserialize, Default, Debug, PartialEq)]
+#[derive(OrcDeserialize, Clone, Default, Debug, PartialEq)]
 struct Test1Option {
     boolean1: Option<bool>,
     byte1: Option<i8>,
@@ -36,7 +39,7 @@ struct Test1Option {
     list: Option<Vec<Option<Test1ItemOption>>>,
 }
 
-#[derive(OrcDeserialize, Default, Debug, PartialEq)]
+#[derive(OrcDeserialize, Clone, Default, Debug, PartialEq)]
 struct Test1ItemOption {
     int1: Option<i32>,
     string1: Option<String>,
@@ -96,7 +99,7 @@ fn expected_rows_options() -> Vec<Test1Option> {
 /// Tests `Option<Test1Option>::from_vector_batch()`
 #[test]
 fn test1_inner_option_outer_option() {
-    let mut row_reader = row_reader();
+    let mut row_reader = get_row_reader();
     Test1Option::check_kind(&row_reader.selected_kind()).unwrap();
 
     let mut rows: Vec<Option<Test1Option>> = Vec::new();
@@ -106,6 +109,14 @@ fn test1_inner_option_outer_option() {
         let new_rows = Option::<Test1Option>::from_vector_batch(&batch.borrow()).unwrap();
         rows.extend(new_rows);
     }
+
+    // Make sure both APIs are consistent
+    let row_reader = get_row_reader();
+    assert_eq!(
+        rows,
+        RowIterator::<Option<Test1Option>>::new(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
 
     assert_eq!(
         rows,
@@ -119,7 +130,7 @@ fn test1_inner_option_outer_option() {
 /// Tests `Test1Option::from_vector_batch()`
 #[test]
 fn test1_inner_option_outer_nooption() {
-    let mut row_reader = row_reader();
+    let mut row_reader = get_row_reader();
     Test1Option::check_kind(&row_reader.selected_kind()).unwrap();
 
     let mut rows: Vec<Test1Option> = Vec::new();
@@ -130,10 +141,17 @@ fn test1_inner_option_outer_nooption() {
         rows.extend(new_rows);
     }
 
+    // Make sure both APIs are consistent
+    let row_reader = get_row_reader();
+    assert_eq!(
+        rows,
+        RowIterator::<Test1Option>::new(row_reader, 10.try_into().unwrap()).collect::<Vec<_>>()
+    );
+
     assert_eq!(rows, expected_rows_options());
 }
 
-#[derive(OrcDeserialize, Default, Debug, PartialEq)]
+#[derive(OrcDeserialize, Clone, Default, Debug, PartialEq)]
 struct Test1NoOption {
     boolean1: bool,
     byte1: i8,
@@ -147,7 +165,7 @@ struct Test1NoOption {
     list: Vec<Test1ItemNoOption>,
 }
 
-#[derive(OrcDeserialize, Default, Debug, PartialEq)]
+#[derive(OrcDeserialize, Clone, Default, Debug, PartialEq)]
 struct Test1ItemNoOption {
     int1: i32,
     string1: String,
@@ -207,7 +225,7 @@ fn expected_rows_nooptions() -> Vec<Test1NoOption> {
 /// Tests `Option<Test1NoOption>::from_vector_batch()`
 #[test]
 fn test1_inner_nooption_outer_option() {
-    let mut row_reader = row_reader();
+    let mut row_reader = get_row_reader();
 
     Test1NoOption::check_kind(&row_reader.selected_kind()).unwrap();
 
@@ -218,6 +236,14 @@ fn test1_inner_nooption_outer_option() {
         let new_rows = Option::<Test1NoOption>::from_vector_batch(&batch.borrow()).unwrap();
         rows.extend(new_rows);
     }
+
+    // Make sure both APIs are consistent
+    let row_reader = get_row_reader();
+    assert_eq!(
+        rows,
+        RowIterator::<Option<Test1NoOption>>::new(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
 
     assert_eq!(
         rows,
@@ -231,7 +257,7 @@ fn test1_inner_nooption_outer_option() {
 /// Tests `Test1NoOption::from_vector_batch()`
 #[test]
 fn test1_inner_nooption_outer_nooption() {
-    let mut row_reader = row_reader();
+    let mut row_reader = get_row_reader();
     Test1NoOption::check_kind(&row_reader.selected_kind()).unwrap();
 
     let mut rows: Vec<Test1NoOption> = Vec::new();
@@ -241,6 +267,13 @@ fn test1_inner_nooption_outer_nooption() {
         let new_rows = Test1NoOption::from_vector_batch(&batch.borrow()).unwrap();
         rows.extend(new_rows);
     }
+
+    // Make sure both APIs are consistent
+    let row_reader = get_row_reader();
+    assert_eq!(
+        rows,
+        RowIterator::<Test1NoOption>::new(row_reader, 10.try_into().unwrap()).collect::<Vec<_>>()
+    );
 
     assert_eq!(rows, expected_rows_nooptions());
 }
