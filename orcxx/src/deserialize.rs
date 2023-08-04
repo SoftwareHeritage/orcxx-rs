@@ -593,7 +593,7 @@ mod tests {
             fn read_from_vector_batch<'a, 'b, T>(
                 src: &BorrowedColumnVectorBatch,
                 mut dst: &'b mut T,
-            ) -> Result<(), DeserializationError>
+            ) -> Result<usize, DeserializationError>
             where
                 &'b mut T: DeserializationTarget<'a, Item = Self>,
             {
@@ -607,7 +607,7 @@ mod tests {
                     &mut dst.map(|struct_| &mut struct_.as_mut().unwrap().field1),
                 )?;
 
-                Ok(())
+                Ok(src.num_elements().try_into().unwrap())
             }
         }
     }
