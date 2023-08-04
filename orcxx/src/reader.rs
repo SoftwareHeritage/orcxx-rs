@@ -110,6 +110,9 @@ impl Default for ReaderOptions {
     }
 }
 
+unsafe impl Send for ReaderOptions {}
+unsafe impl Sync for ReaderOptions {}
+
 /// Input for [Reader::new]
 pub struct InputStream(UniquePtr<ffi::InputStream>);
 
@@ -121,6 +124,8 @@ impl InputStream {
             .map_err(OrcError)
     }
 }
+
+unsafe impl Send for InputStream {}
 
 /// Reads ORC file meta-data and constructs [`RowReader`]
 pub struct Reader(UniquePtr<ffi::Reader>);
@@ -164,6 +169,8 @@ impl Reader {
     }
 }
 
+unsafe impl Send for Reader {}
+
 /// Options passed to [`Reader::row_reader`]
 pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);
 
@@ -192,6 +199,8 @@ impl RowReaderOptions {
     }
 }
 
+unsafe impl Send for RowReaderOptions {}
+
 /// Reads rows from ORC files to a raw [`vector::OwnedColumnVectorBatch`]
 pub struct RowReader(UniquePtr<ffi::RowReader>);
 
@@ -218,6 +227,8 @@ impl RowReader {
     }
 }
 
+unsafe impl Send for RowReader {}
+
 /// Metadata about a stripe (a bunch of rows) of an ORC file.
 pub struct StripeInformation(UniquePtr<ffi::StripeInformation>);
 
@@ -232,3 +243,6 @@ impl StripeInformation {
         self.0.getNumberOfRows()
     }
 }
+
+unsafe impl Send for StripeInformation {}
+unsafe impl Sync for StripeInformation {}
