@@ -123,6 +123,8 @@ pub(crate) mod ffi {
         fn get_data(vectorBatch: &StringVectorBatch) -> &StringDataBuffer;
         #[rust_name = "StringVectorBatch_get_length"]
         fn get_length(vectorBatch: &StringVectorBatch) -> &Int64DataBuffer;
+        #[rust_name = "StringVectorBatch_get_blob"]
+        fn get_blob(vectorBatch: &StringVectorBatch) -> &CharDataBuffer;
 
         #[rust_name = "TimestampVectorBatch_get_data"]
         fn get_data(vectorBatch: &TimestampVectorBatch) -> &Int64DataBuffer;
@@ -698,6 +700,81 @@ impl<'a> StringVectorBatch<'a> {
                     .expect("could not convert u64 to isize"),
             })
         }
+    }
+
+    /// Returns the raw bytes inside the vector, which are the bytes of each
+    /// non-null string concatenated together.
+    ///
+    /// Use [`StringVectorBatch::ranges`] to get the range of each string within
+    /// this array.
+    pub fn bytes(&self) -> &[u8] {
+        let data_buffer = ffi::StringVectorBatch_get_blob(self.0);
+
+        // This should be safe because we trust the data_buffer to be self-consistent
+        unsafe {
+            std::slice::from_raw_parts(
+                data_buffer.data() as *const u8, // it's a *const i8
+                data_buffer
+                    .size()
+                    .try_into()
+                    .expect("could not convert u64 to usize"),
+            )
+        }
+    }
+
+    /// Returns the ranges of individual strings within the array returned by
+    /// [`StringVectorBatch::bytes`].
+    ///
+    /// nulls are represented by `None` values instead of `Some(range)`.
+    pub fn ranges(&self) -> Vec<Option<Range<usize>>> {
+        let mut ranges = Vec::with_capacity(
+            self.num_elements()
+                .try_into()
+                .expect("could not convert u64 to usize"),
+        );
+        let vector_batch =
+            BorrowedColumnVectorBatch(ffi::StringVectorBatch_into_ColumnVectorBatch(self.0));
+        let num_elements = vector_batch.num_elements();
+        let lengths = ffi::StringVectorBatch_get_length(self.0).data();
+        match vector_batch.not_null_ptr() {
+            None => {
+                let mut current_index = 0usize;
+                for i in 0..num_elements {
+                    let i: isize = i.try_into().expect("could not convert u64 to isize");
+                    // This should be safe because the 'lengths' array should have as many
+                    // items as num_elements(), as none of the items are null.
+                    let length: usize = unsafe { *lengths.offset(i) }
+                        .try_into()
+                        .expect("could not convert u64 to usize");
+                    let new_index = current_index + length;
+                    ranges.push(Some(current_index..new_index));
+                    current_index = new_index;
+                }
+            }
+            Some(not_null) => {
+                let not_null = not_null.as_ptr();
+                let mut current_index = 0usize;
+                for i in 0..num_elements {
+                    let i: isize = i.try_into().expect("could not convert u64 to isize");
+                    // This should be safe because the 'lengths' array should have as many
+                    // items as num_elements()
+                    if unsafe { *not_null.offset(i) } == 0 {
+                        ranges.push(None);
+                    } else {
+                        // This should be safe because the 'lengths' array should have as many
+                        // items as num_elements(), minus the number of nulls that we skipped
+                        let length: usize = unsafe { *lengths.offset(i) }
+                            .try_into()
+                            .expect("could not convert u64 to usize");
+                        let new_index = current_index + length;
+                        ranges.push(Some(current_index..new_index));
+                        current_index = new_index;
+                    }
+                }
+            }
+        }
+
+        ranges
     }
 }
 

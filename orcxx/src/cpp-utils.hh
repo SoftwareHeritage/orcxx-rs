@@ -63,6 +63,7 @@ namespace orcxx_rs {
     namespace accessors {
         getter(numElements);
         getter(length);
+        getter(blob);
         getter(data);
         getter(fields);
         getter(keys);

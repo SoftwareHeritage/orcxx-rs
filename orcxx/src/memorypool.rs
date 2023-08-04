@@ -47,5 +47,6 @@ pub(crate) mod ffi {
         type CharDataBuffer;
 
         fn data(&self) -> *const c_char;
+        fn size(&self) -> u64;
     }
 }
