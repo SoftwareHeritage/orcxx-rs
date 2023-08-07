@@ -1,4 +1,4 @@
 [submodule "orc"]
-	path = orc
+	path = orcxx/orc
 	url = https://github.com/apache/orc.git
 	branch = v1.8.4

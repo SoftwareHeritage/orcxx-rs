@@ -26,7 +26,7 @@ chrono = ["dep:chrono"]
 
 [dependencies]
 chrono = { version = "0.4.26", optional = true }
-orcxx = { path = "../orcxx" }
+orcxx = { version = "0.1.0" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "2.0"

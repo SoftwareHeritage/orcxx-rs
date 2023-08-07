@@ -6,7 +6,6 @@ authors = [
 ]
 rust-version = "1.63"
 description = "Rust bindings for the official C++ library for Apache ORC"
-readme = "../README.md"
 homepage = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
 repository = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
 keywords = ["orc", "apache-orc"]
@@ -14,11 +13,20 @@ categories = ["api-bindings", "encoding", "parser-implementations"]
 
 # orcxx itself is GPL.
 #
-# Apache2 for Apache ORC, BSD for protobuf and snappy, Zlib for zlib.
+# Apache-2.0 for Apache ORC, BSD for protobuf and snappy, Zlib for zlib.
 # See orc/LICENSE for the text of these licenses
-license = "GPL-3.0-or-later AND Apache2 AND BSD-3-Clause AND Zlib"
+license = "GPL-3.0-or-later AND Apache-2.0 AND BSD-3-Clause AND Zlib"
 
 build = "build.rs"
+exclude = [
+    "orc/c++/test/",
+    "orc/docker/",
+    "orc/examples/",
+    "orc/java/",
+    "orc/site/",
+    "orc/tools/",
+    "orc/.*",
+]
 
 [features]
 # Defines a 'to_json' module which allows converting ORC files to JSON objects

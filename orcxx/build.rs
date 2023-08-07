@@ -20,7 +20,7 @@ fn main() {
     let orc_build_dir = orc_build_dir.as_path();
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("Missing CARGO_MANIFEST_DIR");
-    let orc_src_dir = Path::new(&manifest_dir).join("../orc");
+    let orc_src_dir = Path::new(&manifest_dir).join("orc");
     let orc_src_dir = orc_src_dir.as_path();
 
     if !orc_build_dir.exists() {
