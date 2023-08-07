@@ -114,7 +114,7 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::*;
 
 /// `#[derive(OrcDeserialize)] struct T { ... }` implements `OrcDeserialize for `T`,
@@ -151,6 +151,10 @@ pub fn orc_deserialize(input: TokenStream) -> TokenStream {
 
 fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>) -> TokenStream {
     let num_fields = field_names.len();
+    let unescaped_field_names: Vec<_> = field_names
+        .iter()
+        .map(|field_name| format_ident!("{}", field_name))
+        .collect();
 
     let check_kind_impl = quote!(
         impl ::orcxx::deserialize::CheckableKind for #ident {
@@ -164,20 +168,20 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                         #(
                             match fields.next() {
                                 Some((i, (field_name, field_type))) => {
-                                    if field_name != stringify!(#field_names) {
+                                    if field_name != stringify!(#unescaped_field_names) {
                                         errors.push(format!(
                                                 "Field #{} must be called {}, not {}",
-                                                i, stringify!(#field_names), field_name))
+                                                i, stringify!(#unescaped_field_names), field_name))
                                     }
                                     else if let Err(s) = <#field_types>::check_kind(field_type) {
                                         errors.push(format!(
                                             "Field {} cannot be decoded: {}",
-                                            stringify!(#field_names), s));
+                                            stringify!(#unescaped_field_names), s));
                                     }
                                 },
                                 None => errors.push(format!(
                                     "Field {} is missing",
-                                    stringify!(#field_names)))
+                                    stringify!(#unescaped_field_names)))
                             }
                         )*
 
