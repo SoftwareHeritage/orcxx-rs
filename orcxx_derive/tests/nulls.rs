@@ -11,7 +11,7 @@ use orcxx::reader;
 use orcxx_derive::OrcDeserialize;
 
 fn row_reader() -> reader::RowReader {
-    let orc_path = "../orc/examples/TestOrcFile.testStringAndBinaryStatistics.orc";
+    let orc_path = "../orcxx/orc/examples/TestOrcFile.testStringAndBinaryStatistics.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 

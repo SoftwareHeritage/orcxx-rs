@@ -9,9 +9,8 @@ use orcxx::reader;
 
 #[test]
 fn test_string_bytes_and_ranges_without_nulls() {
-    let input_stream =
-        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
-            .expect("Could not read");
+    let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+        .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let mut row_reader = reader
@@ -40,7 +39,7 @@ fn test_string_bytes_and_ranges_without_nulls() {
 #[test]
 fn test_string_bytes_and_ranges_with_nulls() {
     let input_stream = reader::InputStream::from_local_file(
-        "../orc/examples/TestOrcFile.testStringAndBinaryStatistics.orc",
+        "orc/examples/TestOrcFile.testStringAndBinaryStatistics.orc",
     )
     .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");

@@ -8,14 +8,11 @@ extern crate orcxx_derive;
 extern crate rust_decimal;
 extern crate rust_decimal_macros;
 
-use std::convert::TryInto;
-
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 use orcxx::deserialize::{CheckableKind, OrcDeserialize};
 use orcxx::reader;
-use orcxx::row_iterator::RowIterator;
 use orcxx_derive::OrcDeserialize;
 
 #[derive(OrcDeserialize, Clone, Debug, PartialEq, Default)]
@@ -24,7 +21,7 @@ struct Root {
 }
 
 fn row_reader() -> reader::RowReader {
-    let orc_path = "../orc/examples/decimal.orc";
+    let orc_path = "../orcxx/orc/examples/decimal.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 

@@ -21,7 +21,7 @@ struct Test1IncorrectOrder {
 /// (string1 and bytes1 are swapped)
 #[test]
 fn incorrect_order() {
-    let orc_path = "../orc/examples/TestOrcFile.test1.orc";
+    let orc_path = "../orcxx/orc/examples/TestOrcFile.test1.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
@@ -42,7 +42,7 @@ struct Test1IncorrectType {
 /// (string1 and bytes1 are swapped)
 #[test]
 fn incorrect_type() {
-    let orc_path = "../orc/examples/TestOrcFile.test1.orc";
+    let orc_path = "../orcxx/orc/examples/TestOrcFile.test1.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 

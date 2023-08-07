@@ -76,8 +76,8 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
 macro_rules! test_apache_file {
     ($name:literal) => {
         test_expected_file(
-            concat!("../orc/examples/", $name, ".orc"),
-            concat!("../orc/examples/expected/", $name, ".jsn.gz"),
+            concat!("orc/examples/", $name, ".orc"),
+            concat!("orc/examples/expected/", $name, ".jsn.gz"),
         )
     };
 }

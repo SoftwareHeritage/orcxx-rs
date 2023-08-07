@@ -45,9 +45,8 @@ fn nonorc_file() {
 
 #[test]
 fn select_column() {
-    let input_stream =
-        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
-            .expect("Could not read");
+    let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+        .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
     let options = reader::RowReaderOptions::default().include_names(vec!["byte1", "string1"]);
     assert!(matches!(reader.row_reader(options), Ok(_)));
@@ -55,9 +54,8 @@ fn select_column() {
 
 #[test]
 fn select_nonexistent_column() {
-    let input_stream =
-        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
-            .expect("Could not read");
+    let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+        .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
     let options = reader::RowReaderOptions::default().include_names(vec!["abc", "def"]);
     assert!(matches!(
@@ -68,9 +66,8 @@ fn select_nonexistent_column() {
 
 #[test]
 fn read_file() {
-    let input_stream =
-        reader::InputStream::from_local_file("../orc/examples/TestOrcFile.test1.orc")
-            .expect("Could not read");
+    let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+        .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let expected_kind = kind::Kind::new(
