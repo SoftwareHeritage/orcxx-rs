@@ -120,11 +120,13 @@ fn test1_inner_option_outer_option() {
     assert_eq!(
         rows,
         RowIterator::<Option<Test1Option>>::new_with_options(row_reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
     assert_eq!(
         rows,
         RowIterator::<Option<Test1Option>>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .unwrap()
             .collect::<Vec<_>>()
     );
@@ -158,11 +160,13 @@ fn test1_inner_option_outer_nooption() {
     assert_eq!(
         rows,
         RowIterator::<Test1Option>::new_with_options(row_reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
     assert_eq!(
         rows,
         RowIterator::<Test1Option>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .unwrap()
             .collect::<Vec<_>>()
     );
@@ -262,11 +266,13 @@ fn test1_inner_nooption_outer_option() {
     assert_eq!(
         rows,
         RowIterator::<Option<Test1NoOption>>::new_with_options(row_reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
     assert_eq!(
         rows,
         RowIterator::<Option<Test1NoOption>>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .unwrap()
             .collect::<Vec<_>>()
     );
@@ -300,11 +306,13 @@ fn test1_inner_nooption_outer_nooption() {
     assert_eq!(
         rows,
         RowIterator::<Test1NoOption>::new_with_options(row_reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
     assert_eq!(
         rows,
         RowIterator::<Test1NoOption>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .unwrap()
             .collect::<Vec<_>>()
     );

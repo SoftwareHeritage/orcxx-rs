@@ -13,7 +13,7 @@
 //! files have a structure at the root and we can't use `#[derive(OrcDeserialize)]`
 //! in this crate to implement it.
 
-use deserialize::{OrcDeserialize, OrcStruct};
+use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
 use reader::{Reader, RowReader, RowReaderOptions};
 use std::convert::TryInto;
 use std::num::NonZeroU64;
@@ -42,16 +42,22 @@ pub struct RowIterator<T: OrcDeserialize + Clone> {
     decoded_items: usize,
 }
 
-impl<T: OrcDeserialize + OrcStruct + Clone> RowIterator<T> {
+impl<T: OrcDeserialize + OrcStruct + CheckableKind + Clone> RowIterator<T> {
     /// Returns an iterator on rows of the given [`Reader`].
     ///
     /// This calls [`RowIterator::new_with_options`] with default options and
     /// includes only the needed columns (see [`RowReaderOptions::include_names`]).
     ///
+    /// Errors are either detailed descriptions of format mismatch (as returned by
+    /// [`CheckableKind::check_kind`], or C++ exceptions.
+    ///
     /// # Panics
     ///
     /// When `batch_size` is larger than `usize`.
-    pub fn new(reader: &Reader, batch_size: NonZeroU64) -> Result<RowIterator<T>, OrcError> {
+    pub fn new(
+        reader: &Reader,
+        batch_size: NonZeroU64,
+    ) -> Result<Result<RowIterator<T>, String>, OrcError> {
         let options = RowReaderOptions::default().include_names(T::columns());
         let row_reader = reader.row_reader(options)?;
         Ok(Self::new_with_options(row_reader, batch_size))
@@ -61,21 +67,28 @@ impl<T: OrcDeserialize + OrcStruct + Clone> RowIterator<T> {
 impl<T: OrcDeserialize + Clone> RowIterator<T> {
     /// Returns an iterator on rows of the given [`RowReader`].
     ///
+    /// Errors are detailed descriptions of format mismatch (as returned by
+    /// [`CheckableKind::check_kind`].
+    ///
     /// # Panics
     ///
     /// When `batch_size` is larger than `usize`.
-    pub fn new_with_options(mut row_reader: RowReader, batch_size: NonZeroU64) -> RowIterator<T> {
+    pub fn new_with_options(
+        mut row_reader: RowReader,
+        batch_size: NonZeroU64,
+    ) -> Result<RowIterator<T>, String> {
+        T::check_kind(&row_reader.selected_kind())?;
         let batch_size: u64 = batch_size.into();
         let batch_size_usize = batch_size.try_into().expect("batch_size overflows usize");
         let mut decoded_batch = Vec::with_capacity(batch_size_usize);
         decoded_batch.resize_with(batch_size_usize, Default::default);
-        RowIterator {
+        Ok(RowIterator {
             batch: row_reader.row_batch(batch_size),
             row_reader,
             decoded_batch,
             index: 0,
             decoded_items: 0, // Will be filled on the first run of next()
-        }
+        })
     }
 }
 
