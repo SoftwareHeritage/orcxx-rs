@@ -13,10 +13,14 @@ use orcxx::reader;
 use orcxx::row_iterator::RowIterator;
 use orcxx_derive::OrcDeserialize;
 
-fn get_row_reader() -> reader::RowReader {
+fn get_reader() -> reader::Reader {
     let orc_path = "../orcxx/orc/examples/TestOrcFile.test1.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
-    let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
+    reader::Reader::new(input_stream).expect("Could not read .orc")
+}
+
+fn get_row_reader() -> reader::RowReader {
+    let reader = get_reader();
 
     let options = reader::RowReaderOptions::default().include_names([
         "boolean1", "byte1", "short1", "int1", "long1", "float1", "double1", "bytes1", "string1",
@@ -99,6 +103,7 @@ fn expected_rows_options() -> Vec<Test1Option> {
 /// Tests `Option<Test1Option>::from_vector_batch()`
 #[test]
 fn test1_inner_option_outer_option() {
+    let reader = get_reader();
     let mut row_reader = get_row_reader();
     Test1Option::check_kind(&row_reader.selected_kind()).unwrap();
 
@@ -110,11 +115,17 @@ fn test1_inner_option_outer_option() {
         rows.extend(new_rows);
     }
 
-    // Make sure both APIs are consistent
+    // Make sure APIs are consistent
     let row_reader = get_row_reader();
     assert_eq!(
         rows,
-        RowIterator::<Option<Test1Option>>::new(row_reader, 10.try_into().unwrap())
+        RowIterator::<Option<Test1Option>>::new_with_options(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rows,
+        RowIterator::<Option<Test1Option>>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
 
@@ -130,6 +141,7 @@ fn test1_inner_option_outer_option() {
 /// Tests `Test1Option::from_vector_batch()`
 #[test]
 fn test1_inner_option_outer_nooption() {
+    let reader = get_reader();
     let mut row_reader = get_row_reader();
     Test1Option::check_kind(&row_reader.selected_kind()).unwrap();
 
@@ -141,11 +153,18 @@ fn test1_inner_option_outer_nooption() {
         rows.extend(new_rows);
     }
 
-    // Make sure both APIs are consistent
+    // Make sure APIs are consistent
     let row_reader = get_row_reader();
     assert_eq!(
         rows,
-        RowIterator::<Test1Option>::new(row_reader, 10.try_into().unwrap()).collect::<Vec<_>>()
+        RowIterator::<Test1Option>::new_with_options(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rows,
+        RowIterator::<Test1Option>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
+            .collect::<Vec<_>>()
     );
 
     assert_eq!(rows, expected_rows_options());
@@ -225,6 +244,7 @@ fn expected_rows_nooptions() -> Vec<Test1NoOption> {
 /// Tests `Option<Test1NoOption>::from_vector_batch()`
 #[test]
 fn test1_inner_nooption_outer_option() {
+    let reader = get_reader();
     let mut row_reader = get_row_reader();
 
     Test1NoOption::check_kind(&row_reader.selected_kind()).unwrap();
@@ -237,11 +257,17 @@ fn test1_inner_nooption_outer_option() {
         rows.extend(new_rows);
     }
 
-    // Make sure both APIs are consistent
+    // Make sure APIs are consistent
     let row_reader = get_row_reader();
     assert_eq!(
         rows,
-        RowIterator::<Option<Test1NoOption>>::new(row_reader, 10.try_into().unwrap())
+        RowIterator::<Option<Test1NoOption>>::new_with_options(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rows,
+        RowIterator::<Option<Test1NoOption>>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
             .collect::<Vec<_>>()
     );
 
@@ -257,6 +283,7 @@ fn test1_inner_nooption_outer_option() {
 /// Tests `Test1NoOption::from_vector_batch()`
 #[test]
 fn test1_inner_nooption_outer_nooption() {
+    let reader = get_reader();
     let mut row_reader = get_row_reader();
     Test1NoOption::check_kind(&row_reader.selected_kind()).unwrap();
 
@@ -268,11 +295,18 @@ fn test1_inner_nooption_outer_nooption() {
         rows.extend(new_rows);
     }
 
-    // Make sure both APIs are consistent
+    // Make sure APIs are consistent
     let row_reader = get_row_reader();
     assert_eq!(
         rows,
-        RowIterator::<Test1NoOption>::new(row_reader, 10.try_into().unwrap()).collect::<Vec<_>>()
+        RowIterator::<Test1NoOption>::new_with_options(row_reader, 10.try_into().unwrap())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rows,
+        RowIterator::<Test1NoOption>::new(&reader, 10.try_into().unwrap())
+            .unwrap()
+            .collect::<Vec<_>>()
     );
 
     assert_eq!(rows, expected_rows_nooptions());

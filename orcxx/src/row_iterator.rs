@@ -13,10 +13,11 @@
 //! files have a structure at the root and we can't use `#[derive(OrcDeserialize)]`
 //! in this crate to implement it.
 
-use deserialize::OrcDeserialize;
-use reader::RowReader;
+use deserialize::{OrcDeserialize, OrcStruct};
+use reader::{Reader, RowReader, RowReaderOptions};
 use std::convert::TryInto;
 use std::num::NonZeroU64;
+use utils::OrcError;
 use vector::OwnedColumnVectorBatch;
 
 /// Iterator on rows of the given [`RowReader`].
@@ -41,13 +42,29 @@ pub struct RowIterator<T: OrcDeserialize + Clone> {
     decoded_items: usize,
 }
 
+impl<T: OrcDeserialize + OrcStruct + Clone> RowIterator<T> {
+    /// Returns an iterator on rows of the given [`Reader`].
+    ///
+    /// This calls [`RowIterator::new_with_options`] with default options and
+    /// includes only the needed columns (see [`RowReaderOptions::include_names`]).
+    ///
+    /// # Panics
+    ///
+    /// When `batch_size` is larger than `usize`.
+    pub fn new(reader: &Reader, batch_size: NonZeroU64) -> Result<RowIterator<T>, OrcError> {
+        let options = RowReaderOptions::default().include_names(T::columns());
+        let row_reader = reader.row_reader(options)?;
+        Ok(Self::new_with_options(row_reader, batch_size))
+    }
+}
+
 impl<T: OrcDeserialize + Clone> RowIterator<T> {
     /// Returns an iterator on rows of the given [`RowReader`].
     ///
     /// # Panics
     ///
     /// When `batch_size` is larger than `usize`.
-    pub fn new(mut row_reader: RowReader, batch_size: NonZeroU64) -> RowIterator<T> {
+    pub fn new_with_options(mut row_reader: RowReader, batch_size: NonZeroU64) -> RowIterator<T> {
         let batch_size: u64 = batch_size.into();
         let batch_size_usize = batch_size.try_into().expect("batch_size overflows usize");
         let mut decoded_batch = Vec::with_capacity(batch_size_usize);
