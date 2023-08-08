@@ -35,7 +35,7 @@
 //! extern crate orcxx;
 //! extern crate orcxx_derive;
 //!
-//! use orcxx::deserialize::OrcDeserialize;
+//! use orcxx::deserialize::{OrcDeserialize, OrcStruct};
 //! use orcxx::reader;
 //! use orcxx_derive::OrcDeserialize;
 //!
@@ -50,8 +50,9 @@
 //! let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
 //! let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 //!
-//! // Setup reader (list of columns must match fields in Test1)
-//! let options = reader::RowReaderOptions::default().include_names(["long1"]);
+//! // Only read columns we need
+//! let options = reader::RowReaderOptions::default().include_names(Test1::columns());
+//!
 //! let mut row_reader = reader.row_reader(options).expect("'long1' is missing from the .orc");
 //!
 //! let mut rows: Vec<Option<Test1>> = Vec::new();
@@ -204,6 +205,32 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
         }
     );
 
+    let orc_struct_impl = quote!(
+        impl ::orcxx::deserialize::OrcStruct for #ident {
+            fn columns_with_prefix(prefix: &str) -> Vec<String> {
+                let mut columns = Vec::with_capacity(#num_fields);
+
+                // Hack to get types. Hopefully the compiler notices we don't
+                // actually use it at runtime.
+                let instance: #ident = Default::default();
+
+                #({
+                    #[inline(always)]
+                    fn add_columns<FieldType: ::orcxx::deserialize::OrcStruct>(columns: &mut Vec<String>, prefix: &str, _: FieldType) {
+                        let mut field_name_prefix = prefix.to_string();
+                        if prefix.len() != 0 {
+                            field_name_prefix.push_str(".");
+                        }
+                        field_name_prefix.push_str(stringify!(#unescaped_field_names));
+                        columns.extend(FieldType::columns_with_prefix(&field_name_prefix));
+                    }
+                    add_columns(&mut columns, prefix, instance.#field_names);
+                })*
+                columns
+            }
+        }
+    );
+
     let prelude = quote!(
         use ::std::convert::TryInto;
         use ::std::collections::HashMap;
@@ -306,6 +333,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
 
     quote!(
         #check_kind_impl
+        #orc_struct_impl
 
         #read_from_vector_batch_impl
         #read_options_from_vector_batch_impl

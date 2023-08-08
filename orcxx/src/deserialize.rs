@@ -80,6 +80,26 @@ impl<T: CheckableKind> CheckableKind for Option<T> {
     }
 }
 
+/// Types which provide a static `columns` method, which returns the names of all
+/// ORC columns the struct expects to read from.
+///
+/// Nested field names are separated by dots.
+///
+/// For scalars, this method simply returns the prefix.
+pub trait OrcStruct {
+    fn columns() -> Vec<String> {
+        Self::columns_with_prefix("")
+    }
+
+    fn columns_with_prefix(prefix: &str) -> Vec<String>;
+}
+
+impl<T: OrcStruct> OrcStruct for Option<T> {
+    fn columns_with_prefix(prefix: &str) -> Vec<String> {
+        T::columns_with_prefix(prefix)
+    }
+}
+
 /// Types which can be read in batch from ORC columns ([`BorrowedColumnVectorBatch`]).
 pub trait OrcDeserialize: Sized + Default + CheckableKind {
     /// Reads from a [`BorrowedColumnVectorBatch`] to a structure that behaves like
@@ -127,6 +147,12 @@ macro_rules! impl_scalar {
         impl_scalar!($ty, $kind, $method, |s| Ok(s as $ty));
     };
     ($ty:ty, $kind:expr, $method:ident, $cast:expr) => {
+        impl OrcStruct for $ty {
+            fn columns_with_prefix(prefix: &str) -> Vec<String> {
+                vec![prefix.to_string()]
+            }
+        }
+
         impl CheckableKind for $ty {
             fn check_kind(kind: &Kind) -> Result<(), String> {
                 check_kind_equals(kind, &$kind, stringify!($ty))
@@ -199,6 +225,12 @@ impl_scalar!(String, Kind::String, try_into_strings, |s| {
 impl_scalar!(Vec<u8>, Kind::Binary, try_into_strings, |s: &[u8]| Ok(
     s.to_vec()
 ));
+
+impl OrcStruct for Decimal {
+    fn columns_with_prefix(prefix: &str) -> Vec<String> {
+        vec![prefix.to_string()]
+    }
+}
 
 impl CheckableKind for Decimal {
     fn check_kind(kind: &Kind) -> Result<(), String> {
@@ -287,6 +319,12 @@ impl OrcDeserialize for Option<Decimal> {
         }
 
         Ok(src.num_elements().try_into().unwrap())
+    }
+}
+
+impl<T: OrcStruct> OrcStruct for Vec<T> {
+    fn columns_with_prefix(prefix: &str) -> Vec<String> {
+        T::columns_with_prefix(prefix)
     }
 }
 
