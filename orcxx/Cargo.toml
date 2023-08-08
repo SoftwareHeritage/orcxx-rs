@@ -1,15 +1,14 @@
 [package]
 name = "orcxx"
-version = "0.1.0"
-authors = [
-    "Software Heritage developers <swh-devel@inria.fr>"
-]
-rust-version = "1.63"
 description = "Rust bindings for the official C++ library for Apache ORC"
-homepage = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
-repository = "https://gitlab.softwareheritage.org/swh/devel/orcxx-rs"
-keywords = ["orc", "apache-orc"]
-categories = ["api-bindings", "encoding", "parser-implementations"]
+version.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # orcxx itself is GPL.
 #
