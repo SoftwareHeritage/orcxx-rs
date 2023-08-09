@@ -1,3 +1,16 @@
+# v0.2.1
+
+*2023-08-09*
+
+Documentation:
+
+* `orcxx_derive`: Document RowIterator with an example
+
+Internal:
+
+* Use system libraries when building on docs.rs
+
+
 # v0.2.0
 
 *2023-08-08*
