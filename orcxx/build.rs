@@ -73,11 +73,27 @@ struct OrcxxBuild<'a> {
 impl<'a> OrcxxBuild<'a> {
     /// Configures Apache ORC build
     fn run_cmake(&self) {
+        let env = if std::env::var("DOCS_RS").is_ok() {
+            // Force use of system libraries instead of downloading them
+            vec![
+                ("PROTOBUF_HOME", "/usr"),
+                ("SNAPPY_HOME", "/usr"),
+                ("ZLIB_HOME", "/usr"),
+                ("LZ4_HOME", "/usr"),
+                ("ZSTD_HOME", "/usr"),
+            ]
+            .into_iter()
+            .collect()
+        } else {
+            vec![]
+        };
+
         let status = process::Command::new("cmake")
             .arg(self.orc_src_dir)
             .arg("-DBUILD_JAVA=OFF")
             .arg("-DBUILD_TOOLS=OFF")
             .arg("-DBUILD_CPP_TESTS=OFF")
+            .envs(env)
             .current_dir(self.orc_build_dir)
             .status()
             .expect("failed to run cmake");
