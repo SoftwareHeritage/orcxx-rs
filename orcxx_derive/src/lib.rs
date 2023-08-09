@@ -29,13 +29,56 @@
 //!
 //! See `orcxx`'s documentation.
 //!
-//! # Example
+//! # Examples
 //!
 //! ```
 //! extern crate orcxx;
 //! extern crate orcxx_derive;
 //!
+//! use std::num::NonZeroU64;
+//!
 //! use orcxx::deserialize::{OrcDeserialize, OrcStruct};
+//! use orcxx::row_iterator::RowIterator;
+//! use orcxx::reader;
+//! use orcxx_derive::OrcDeserialize;
+//!
+//! // Define structure
+//! #[derive(OrcDeserialize, Clone, Default, Debug, PartialEq, Eq)]
+//! struct Test1 {
+//!     long1: Option<i64>,
+//! }
+//!
+//! // Open file
+//! let orc_path = "../orcxx/orc/examples/TestOrcFile.test1.orc";
+//! let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
+//! let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
+//!
+//! let batch_size = NonZeroU64::new(1024).unwrap();
+//! let mut rows: Vec<Option<Test1>> = RowIterator::new(&reader, batch_size)
+//!     .expect("Could not open ORC file")
+//!     .expect("Unexpected schema")
+//!     .collect();
+//!
+//! assert_eq!(
+//!     rows,
+//!     vec![
+//!         Some(Test1 {
+//!             long1: Some(9223372036854775807)
+//!         }),
+//!         Some(Test1 {
+//!             long1: Some(9223372036854775807)
+//!         })
+//!     ]
+//! );
+//! ```
+//!
+//! Or equivalently, to avoid cloning structures:
+//!
+//! ```
+//! extern crate orcxx;
+//! extern crate orcxx_derive;
+//!
+//! use orcxx::deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
 //! use orcxx::reader;
 //! use orcxx_derive::OrcDeserialize;
 //!
@@ -53,7 +96,8 @@
 //! // Only read columns we need
 //! let options = reader::RowReaderOptions::default().include_names(Test1::columns());
 //!
-//! let mut row_reader = reader.row_reader(options).expect("'long1' is missing from the .orc");
+//! let mut row_reader = reader.row_reader(options).expect("Could not open ORC file");
+//! Test1::check_kind(&row_reader.selected_kind()).expect("Unexpected schema");
 //!
 //! let mut rows: Vec<Option<Test1>> = Vec::new();
 //!
