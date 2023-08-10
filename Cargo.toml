@@ -3,6 +3,7 @@
 members = [
     "orcxx",
     "orcxx_derive",
+    "orcxx_readme",
 ]
 
 
@@ -20,6 +21,7 @@ categories = ["encoding", "parser-implementations"]
 
 [workspace.dependencies]
 orcxx = { version = "0.2.1", path = "orcxx/" }
+orcxx_derive = { version = "0.2.1", path = "orcxx_derive/" }
 
 
 

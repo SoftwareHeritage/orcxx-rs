@@ -32,6 +32,8 @@
 //!
 //! # Examples
 //!
+//! <!-- Keep this in sync with README.md -->
+//!
 //! ```
 //! extern crate orcxx;
 //! extern crate orcxx_derive;
@@ -74,6 +76,8 @@
 //! ```
 //!
 //! Or equivalently, to avoid cloning structures:
+//!
+//! <!-- Keep this in sync with README.md -->
 //!
 //! ```
 //! extern crate orcxx;
@@ -125,6 +129,8 @@
 //! ```
 //!
 //! It is also possible to nest structures:
+//!
+//! <!-- Keep this in sync with README.md -->
 //!
 //! ```
 //! extern crate orcxx;
