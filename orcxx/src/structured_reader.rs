@@ -6,7 +6,7 @@
 //! Dynamically-typed column-oriented parser for ORC files
 //!
 //! This is particularly useful to read files whose schema is not known at compile time.
-//! If it is used at compile time, [`orcxx_derive`](../../orcxx_derive/) and
+//! If it is used at compile time, [`orcxx_derive`](https://docs.rs/orcxx_derive/) and
 //! [`RowIterator`](::row_iterator::RowIterator) provide a nicer API.
 
 use kind::Kind;
