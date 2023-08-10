@@ -1,3 +1,18 @@
+# v0.2.2
+
+*2023-08-09*
+
+Documentation:
+
+* Copy examples to the README
+* Add links between documentation pages
+
+Internal:
+
+* Add pre-commit config
+* Remove orcxx/README.md symlink
+
+
 # v0.2.1
 
 *2023-08-09*

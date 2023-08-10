@@ -8,7 +8,7 @@ members = [
 
 
 [workspace.package]
-version = "0.2.1"
+version = "0.2.2"
 authors = [
     "Software Heritage developers <swh-devel@inria.fr>"
 ]
@@ -20,8 +20,8 @@ keywords = ["orc", "apache-orc", "proc-macros"]
 categories = ["encoding", "parser-implementations"]
 
 [workspace.dependencies]
-orcxx = { version = "0.2.1", path = "orcxx/" }
-orcxx_derive = { version = "0.2.1", path = "orcxx_derive/" }
+orcxx = { version = "0.2.2", path = "orcxx/" }
+orcxx_derive = { version = "0.2.2", path = "orcxx_derive/" }
 
 
 
