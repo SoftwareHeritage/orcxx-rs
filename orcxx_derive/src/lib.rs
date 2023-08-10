@@ -3,7 +3,8 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! Custom `derive` for the `orcxx` crate, to deserialize `structs` using Apache ORC C++ library.
+//! Custom `derive` for the [`orcxx`](../orcxx/) crate, to deserialize `structs`
+//! using Apache ORC C++ library.
 //!
 //! # Supported types
 //!
@@ -12,7 +13,7 @@
 //! * [`bool`], [`i8`], [`i16`], [`i32`], [`i64`], [`f32`], [`f64`], [`String`], [`Vec<u8>`](Vec),
 //!   mapping to their respective ORC type
 //! * `Vec<T>` when `T` is a supported type, mapping to an ORC list
-//! * `HashMap<K, V>` and `Vec<(K, V)>` are not supported yet to deserialize ORC list
+//! * `HashMap<K, V>` and `Vec<(K, V)>` are not supported yet to deserialize ORC maps
 //!   (see <https://gitlab.softwareheritage.org/swh/devel/orcxx-rs/-/issues/1>)
 //!
 //! # About null values
@@ -27,7 +28,7 @@
 //!
 //! # Panics
 //!
-//! See `orcxx`'s documentation.
+//! See [`orcxx`'s documentation](../orcxx/#panics).
 //!
 //! # Examples
 //!
@@ -162,8 +163,12 @@ use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use syn::*;
 
-/// `#[derive(OrcDeserialize)] struct T { ... }` implements `OrcDeserialize for `T`,
-/// `OrcDeserialize for `Option<T>`, and `CheckableKind for `T`,
+/// `#[derive(OrcDeserialize)] struct T { ... }` implements
+/// [`OrcDeserialize`](../orcxx/deserialize/struct.OrcDeserialize.html),
+/// [`CheckableKind`](../orcxx/deserialize/struct.CheckableKind.html), and
+/// [`OrcStruct`](../orcxx/deserialize/struct.OrcStruct.html) for `T`
+///
+/// This automatically gives implementations for `Option<T>` and `Vec<T>` as well.
 #[proc_macro_derive(OrcDeserialize)]
 pub fn orc_deserialize(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);

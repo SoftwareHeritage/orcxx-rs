@@ -3,7 +3,11 @@
 // License: GNU General Public License version 3, or any later version
 // See top-level LICENSE file for more information
 
-//! High-level column-oriented parser for ORC files
+//! Dynamically-typed column-oriented parser for ORC files
+//!
+//! This is particularly useful to read files whose schema is not known at compile time.
+//! If it is used at compile time, [`orcxx_derive`](../../orcxx_derive/) and
+//! [`RowIterator`](::row_iterator::RowIterator) provide a nicer API.
 
 use kind::Kind;
 use reader::RowReader;
@@ -13,9 +17,12 @@ use vector::ColumnVectorBatch;
 /// Reads rows from ORC files to a tree of vectors (one for each column)
 ///
 /// Wrapper for [`RowReader`] which provides an alternative to [`RowReader::row_batch`]
-/// and [`RowReader::read_into`], by returning typed VectorBatches directly instead of
-/// an [`vector::OwnedColumnVectorBatch`] which needs to be manually cast into
-/// [`vector::StructVectorBatch`], [`vector::StringVectorBatch`], ...
+/// and [`RowReader::read_into`], by returning an enum of VectorBatches whose type
+/// is dynamically chosen based on the file's schema.
+///
+/// This avoids manually casting [`vector::OwnedColumnVectorBatch`] to
+/// [`vector::StructVectorBatch`], [`vector::StringVectorBatch`], ... before reading
+/// its values.
 pub struct StructuredRowReader<'a> {
     inner: &'a mut RowReader,
     vector_batch: vector::OwnedColumnVectorBatch,

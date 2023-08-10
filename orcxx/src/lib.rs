@@ -30,7 +30,7 @@
 //! casts the vectors into the right type, recursively, in a
 //! [`ColumnTree`](structured_reader::ColumnTree).
 //!
-//! For row-oriented access, see the `orcxx_derive` crate, which allows
+//! For row-oriented access, see the [`orcxx_derive`](../orcxx_derive) crate, which allows
 //! `#[derive(OrcDeserialize)]` on structures in order to deserialize ORC files into
 //! a structure instance for each row.
 //! These structures can be deserialized either directly into vector batches with
@@ -51,6 +51,9 @@
 //! C++ exceptions should be converted to Rust [`Result`]s, though.
 //!
 //! # Examples
+//!
+//! See the [`orcxx_derive` documentation](../orcxx_derive/) for more high-level
+//! examples and documentation.
 //!
 //! ```
 //! use orcxx::reader;
