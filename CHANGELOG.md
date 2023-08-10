@@ -1,3 +1,12 @@
+# v0.2.3
+
+*2023-08-09*
+
+Documentation:
+
+* Avoid relative links between crate documentation
+
+
 # v0.2.2
 
 *2023-08-09*
