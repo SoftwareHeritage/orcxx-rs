@@ -279,6 +279,8 @@ impl OwnedColumnVectorBatch {
     }
 }
 
+unsafe impl Send for OwnedColumnVectorBatch {}
+
 /// A column (or set of column) of a stripe, with values of unknown type.
 pub struct BorrowedColumnVectorBatch<'a>(&'a ffi::ColumnVectorBatch);
 
@@ -349,6 +351,8 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
     }
 }
 
+unsafe impl<'a> Send for BorrowedColumnVectorBatch<'a> {}
+
 /// A specialized [`ColumnVectorBatch`] whose values are known to be structures.
 ///
 /// It is constructed through [`BorrowedColumnVectorBatch::try_into_structs`]
@@ -376,6 +380,8 @@ impl<'a> StructVectorBatch<'a> {
             .collect()
     }
 }
+
+unsafe impl<'a> Send for StructVectorBatch<'a> {}
 
 /// A specialized [`ColumnVectorBatch`] whose values are known to be integer-like.
 ///
@@ -410,6 +416,8 @@ impl<'a> LongVectorBatch<'a> {
         }
     }
 }
+
+unsafe impl<'a> Send for LongVectorBatch<'a> {}
 
 /// Iterator on [`LongVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -575,6 +583,8 @@ impl<'a> DoubleVectorBatch<'a> {
         }
     }
 }
+
+unsafe impl<'a> Send for DoubleVectorBatch<'a> {}
 
 /// Iterator on [`DoubleVectorBatch`] that may yield `None`
 #[derive(Debug, Clone)]
@@ -778,6 +788,8 @@ impl<'a> StringVectorBatch<'a> {
     }
 }
 
+unsafe impl<'a> Send for StringVectorBatch<'a> {}
+
 /// Iterator on [`StringVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct StringVectorBatchIterator<'a> {
@@ -916,6 +928,8 @@ impl<'a> TimestampVectorBatch<'a> {
         }
     }
 }
+
+unsafe impl<'a> Send for TimestampVectorBatch<'a> {}
 
 /// Iterator on [`TimestampVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -1072,6 +1086,8 @@ impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     }
 }
 
+unsafe impl<'a> Send for Decimal64VectorBatch<'a> {}
+
 /// Iterator on [`Decimal64VectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
 pub struct Decimal64VectorBatchIterator<'a> {
@@ -1218,6 +1234,8 @@ impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     }
 }
 
+unsafe impl<'a> Send for Decimal128VectorBatch<'a> {}
+
 /// Iterator on [`Decimal128VectorBatch`]
 #[derive(Debug, Clone)]
 pub struct Decimal128VectorBatchIterator<'a> {
@@ -1350,6 +1368,8 @@ impl<'a> ListVectorBatch<'a> {
     }
 }
 
+unsafe impl<'a> Send for ListVectorBatch<'a> {}
+
 /// A specialized [`ColumnVectorBatch`] whose values are dictionaries with arbitrary types
 /// as keys and values
 ///
@@ -1400,6 +1420,8 @@ impl<'a> MapVectorBatch<'a> {
         }
     }
 }
+
+unsafe impl<'a> Send for MapVectorBatch<'a> {}
 
 /// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`],
 /// which may yield `None`.
