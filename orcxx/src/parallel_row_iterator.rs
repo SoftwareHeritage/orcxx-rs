@@ -18,6 +18,7 @@ use reader::{Reader, RowReaderOptions};
 use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::num::NonZeroU64;
+use std::sync::Arc;
 use utils::OrcError;
 
 use rayon::iter::plumbing::{bridge, Consumer, Producer, ProducerCallback};
@@ -35,8 +36,8 @@ use row_iterator::RowIterator;
 ///
 /// next() repeatedly calls [`OrcDeserialize::read_from_vector_batch`] and panics
 /// when it returns a [`::deserialize::DeserializationError`].
-pub struct ParallelRowIterator<'a, T: OrcDeserialize + Clone> {
-    reader: &'a Reader,
+pub struct ParallelRowIterator<T: OrcDeserialize + Clone> {
+    reader: Arc<Reader>,
     row_reader_options: RowReaderOptions,
     batch_size: NonZeroU64,
     start: usize,
@@ -44,7 +45,7 @@ pub struct ParallelRowIterator<'a, T: OrcDeserialize + Clone> {
     marker: PhantomData<T>,
 }
 
-impl<'a, T: OrcDeserialize + OrcStruct + CheckableKind + Clone> ParallelRowIterator<'a, T> {
+impl<T: OrcDeserialize + OrcStruct + CheckableKind + Clone> ParallelRowIterator<T> {
     /// Returns a parallel iterator on rows of the given [`Reader`].
     ///
     /// This calls [`ParallelRowIterator::new_with_options`] with default options and
@@ -57,7 +58,7 @@ impl<'a, T: OrcDeserialize + OrcStruct + CheckableKind + Clone> ParallelRowItera
     ///
     /// When `batch_size` is larger than `usize`.
     pub fn new(
-        reader: &'a Reader,
+        reader: Arc<Reader>,
         batch_size: NonZeroU64,
     ) -> Result<Result<ParallelRowIterator<T>, String>, OrcError> {
         let options = RowReaderOptions::default().include_names(T::columns());
@@ -65,7 +66,7 @@ impl<'a, T: OrcDeserialize + OrcStruct + CheckableKind + Clone> ParallelRowItera
     }
 }
 
-impl<'a, T: OrcDeserialize + Clone> ParallelRowIterator<'a, T> {
+impl<T: OrcDeserialize + Clone> ParallelRowIterator<T> {
     /// Returns a parallel iterator on rows of the given [`Reader`].
     ///
     /// Errors are detailed descriptions of format mismatch (as returned by
@@ -75,7 +76,7 @@ impl<'a, T: OrcDeserialize + Clone> ParallelRowIterator<'a, T> {
     ///
     /// When `batch_size` is larger than `usize`.
     pub fn new_with_options(
-        reader: &'a Reader,
+        reader: Arc<Reader>,
         batch_size: NonZeroU64,
         options: RowReaderOptions,
     ) -> Result<Result<ParallelRowIterator<T>, String>, OrcError> {
@@ -89,7 +90,7 @@ impl<'a, T: OrcDeserialize + Clone> ParallelRowIterator<'a, T> {
             .try_into()
             .expect("row count overflows usize");
         Ok(Ok(ParallelRowIterator {
-            reader,
+            reader: reader,
             row_reader_options: options,
             batch_size,
             start: 0,
@@ -99,7 +100,7 @@ impl<'a, T: OrcDeserialize + Clone> ParallelRowIterator<'a, T> {
     }
 }
 
-impl<'a, T: OrcDeserialize + Clone + Send + Sync> ParallelIterator for ParallelRowIterator<'a, T> {
+impl<T: OrcDeserialize + Clone + Send + Sync> ParallelIterator for ParallelRowIterator<T> {
     type Item = T;
 
     fn drive_unindexed<C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>>(
@@ -114,9 +115,7 @@ impl<'a, T: OrcDeserialize + Clone + Send + Sync> ParallelIterator for ParallelR
     }
 }
 
-impl<'a, T: OrcDeserialize + Clone + Send + Sync> IndexedParallelIterator
-    for ParallelRowIterator<'a, T>
-{
+impl<T: OrcDeserialize + Clone + Send + Sync> IndexedParallelIterator for ParallelRowIterator<T> {
     fn with_producer<CB: ProducerCallback<Self::Item>>(self, callback: CB) -> CB::Output {
         callback.callback(RowProducer {
             iter: &self,
@@ -135,7 +134,7 @@ impl<'a, T: OrcDeserialize + Clone + Send + Sync> IndexedParallelIterator
 }
 
 struct RowProducer<'a, T: OrcDeserialize + Clone + Send + Sync> {
-    iter: &'a ParallelRowIterator<'a, T>,
+    iter: &'a ParallelRowIterator<T>,
     start: usize,
     end: usize,
 }

@@ -4,6 +4,7 @@ extern crate orcxx_derive;
 extern crate rayon;
 
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 
@@ -32,8 +33,8 @@ struct Item {
     string1: String,
 }
 #[test]
-fn testSeek() {
-    let orca_path = "../orcxx/orc/examples/TestOrcFile.testSeek.orc";
+fn test_seek() {
+    let orc_path = "../orcxx/orc/examples/TestOrcFile.testSeek.orc";
     let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
@@ -42,16 +43,18 @@ fn testSeek() {
         .unwrap()
         .collect::<Vec<_>>();
 
+    let reader = Arc::new(reader);
+
     assert_eq!(
         seq_rows,
-        ParallelRowIterator::<Row>::new(&reader, 10.try_into().unwrap())
+        ParallelRowIterator::<Row>::new(reader.clone(), 10.try_into().unwrap())
             .unwrap()
             .unwrap()
             .collect::<Vec<_>>(),
     );
 
     let mut par_rows = Vec::new();
-    ParallelRowIterator::<Row>::new(&reader, 10.try_into().unwrap())
+    ParallelRowIterator::<Row>::new(reader, 10.try_into().unwrap())
         .unwrap()
         .unwrap()
         .collect_into_vec(&mut par_rows);
