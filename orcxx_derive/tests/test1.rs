@@ -26,7 +26,7 @@ fn get_row_reader() -> reader::RowReader {
         "boolean1", "byte1", "short1", "int1", "long1", "float1", "double1", "bytes1", "string1",
         "list",
     ]);
-    reader.row_reader(options).unwrap()
+    reader.row_reader(&options).unwrap()
 }
 
 #[derive(OrcDeserialize, Clone, Default, Debug, PartialEq)]

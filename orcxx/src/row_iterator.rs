@@ -59,7 +59,7 @@ impl<T: OrcDeserialize + OrcStruct + CheckableKind + Clone> RowIterator<T> {
         batch_size: NonZeroU64,
     ) -> Result<Result<RowIterator<T>, String>, OrcError> {
         let options = RowReaderOptions::default().include_names(T::columns());
-        let row_reader = reader.row_reader(options)?;
+        let row_reader = reader.row_reader(&options)?;
         Ok(Self::new_with_options(row_reader, batch_size))
     }
 }

@@ -149,7 +149,7 @@ impl Reader {
             .map(Reader)
     }
 
-    pub fn row_reader(&self, options: RowReaderOptions) -> OrcResult<RowReader> {
+    pub fn row_reader(&self, options: &RowReaderOptions) -> OrcResult<RowReader> {
         self.0
             .createRowReader(&options.0)
             .map(RowReader)

@@ -49,7 +49,7 @@ fn select_column() {
         .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
     let options = reader::RowReaderOptions::default().include_names(vec!["byte1", "string1"]);
-    assert!(matches!(reader.row_reader(options), Ok(_)));
+    assert!(matches!(reader.row_reader(&options), Ok(_)));
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn select_nonexistent_column() {
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
     let options = reader::RowReaderOptions::default().include_names(vec!["abc", "def"]);
     assert!(matches!(
-        reader.row_reader(options),
+        reader.row_reader(&options),
         Err(utils::OrcError(_))
     ));
 }
@@ -106,7 +106,7 @@ fn read_file() {
     assert_eq!(reader.kind(), expected_kind, "unexpected file structure");
 
     let mut row_reader = reader
-        .row_reader(reader::RowReaderOptions::default())
+        .row_reader(&reader::RowReaderOptions::default())
         .unwrap();
     assert_eq!(
         row_reader.selected_kind(),

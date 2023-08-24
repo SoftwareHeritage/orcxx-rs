@@ -83,7 +83,7 @@ let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 // Only read columns we need
 let options = reader::RowReaderOptions::default().include_names(Test1::columns());
 
-let mut row_reader = reader.row_reader(options).expect("Could not open ORC file");
+let mut row_reader = reader.row_reader(&options).expect("Could not open ORC file");
 Test1::check_kind(&row_reader.selected_kind()).expect("Unexpected schema");
 
 let mut rows: Vec<Option<Test1>> = Vec::new();
@@ -167,7 +167,7 @@ let reader = reader::Reader::new(input_stream).expect("Could not read");
 
 println!("{:#?}", reader.kind()); // Prints the type of columns in the file
 
-let mut row_reader = reader.row_reader(reader::RowReaderOptions::default()).unwrap();
+let mut row_reader = reader.row_reader(&reader::RowReaderOptions::default()).unwrap();
 let mut batch = row_reader.row_batch(1024);
 
 let mut total_elements = 0;

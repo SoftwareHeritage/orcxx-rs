@@ -16,7 +16,7 @@ fn row_reader() -> reader::RowReader {
     let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 
     let options = reader::RowReaderOptions::default().include_names(["bytes1", "string1"]);
-    reader.row_reader(options).unwrap()
+    reader.row_reader(&options).unwrap()
 }
 
 #[test]

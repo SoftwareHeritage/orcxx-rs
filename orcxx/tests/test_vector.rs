@@ -14,7 +14,7 @@ fn test_string_bytes_and_ranges_without_nulls() {
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let mut row_reader = reader
-        .row_reader(reader::RowReaderOptions::default().include_names(["bytes1", "string1"]))
+        .row_reader(&reader::RowReaderOptions::default().include_names(["bytes1", "string1"]))
         .unwrap();
 
     let mut batch = row_reader.row_batch(1024);
@@ -45,7 +45,7 @@ fn test_string_bytes_and_ranges_with_nulls() {
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
 
     let mut row_reader = reader
-        .row_reader(reader::RowReaderOptions::default().include_names(["bytes1", "string1"]))
+        .row_reader(&reader::RowReaderOptions::default().include_names(["bytes1", "string1"]))
         .unwrap();
 
     let mut batch = row_reader.row_batch(1024);

@@ -66,7 +66,7 @@
 //!
 //! println!("{:#?}", reader.kind()); // Prints the type of columns in the file
 //!
-//! let mut row_reader = reader.row_reader(reader::RowReaderOptions::default()).unwrap();
+//! let mut row_reader = reader.row_reader(&reader::RowReaderOptions::default()).unwrap();
 //! let mut batch = row_reader.row_batch(1024);
 //!
 //! let mut total_elements = 0;
