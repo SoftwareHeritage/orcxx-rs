@@ -22,7 +22,7 @@ categories = ["encoding", "parser-implementations"]
 [workspace.dependencies]
 orcxx = { version = "0.2.3", path = "orcxx/" }
 orcxx_derive = { version = "0.2.3", path = "orcxx_derive/" }
-
+rayon = "1.7.0"
 
 
 [profile.release]

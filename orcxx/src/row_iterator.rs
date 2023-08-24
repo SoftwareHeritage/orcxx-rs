@@ -98,6 +98,15 @@ impl<T: OrcDeserialize + Clone> RowIterator<T> {
             row_count: reader.row_count(),
         }))
     }
+
+    pub fn seek(mut self, row_number: u64) -> Self {
+        // TODO: avoid seeking in the underlying row_reader if the row we see is already
+        // in the current buffer.
+        self.row_reader.seek_to_row(row_number);
+        self.index = 0;
+        self.decoded_items = 0;
+        self
+    }
 }
 
 /// # Panics

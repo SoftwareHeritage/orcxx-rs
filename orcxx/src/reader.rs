@@ -175,6 +175,7 @@ impl Reader {
 }
 
 unsafe impl Send for Reader {}
+unsafe impl Sync for Reader {}
 
 /// Options passed to [`Reader::row_reader`]
 pub struct RowReaderOptions(UniquePtr<ffi::RowReaderOptions>);

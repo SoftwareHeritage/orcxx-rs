@@ -102,12 +102,16 @@
 //! ```
 
 extern crate cxx;
+#[cfg(feature = "rayon")]
+extern crate rayon;
 extern crate unsafe_unwrap;
 
 pub mod deserialize;
 mod int128;
 pub mod kind;
 mod memorypool;
+#[cfg(feature = "rayon")]
+pub mod parallel_row_iterator;
 pub mod reader;
 pub mod row_iterator;
 pub mod structured_reader;

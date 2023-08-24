@@ -31,6 +31,9 @@ exclude = [
 # Defines a 'to_json' module which allows converting ORC files to JSON objects
 json = ["dep:json", "dep:chrono"]
 
+# Enable implementation of rayon's ParallelIterator
+rayon = ["dep:rayon"]
+
 [dependencies]
 cxx = "1.0"
 json = { version = "0.12.4", optional = true }
@@ -38,6 +41,7 @@ chrono = { version = "0.4.26", optional = true }
 # TODO: Make rust_decimal optional
 rust_decimal = "1.30.0"
 unsafe_unwrap = "0.1.0"
+rayon = { workspace = true, optional = true }
 
 [build-dependencies]
 cxx-build = "1.0"
