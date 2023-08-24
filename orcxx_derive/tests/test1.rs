@@ -56,12 +56,16 @@ fn test_with_batch_size<
         "Unexpected rows when using from_vector_batch API"
     );
 
-    let row_reader = get_row_reader();
     assert_eq!(
         expected_rows,
-        RowIterator::<T>::new_with_options(row_reader, BATCH_SIZE.try_into().unwrap(),)
-            .unwrap()
-            .collect::<Vec<_>>(),
+        RowIterator::<T>::new_with_options(
+            &reader,
+            BATCH_SIZE.try_into().unwrap(),
+            &get_row_reader_options()
+        )
+        .unwrap()
+        .unwrap()
+        .collect::<Vec<_>>(),
         "Inconsistent set of rows when using RowIterator"
     );
 
@@ -73,6 +77,63 @@ fn test_with_batch_size<
             .collect::<Vec<_>>(),
         "Inconsistent set of rows when RowIterator constructed with default options"
     );
+
+    // Test manual iteration
+    let mut iter = RowIterator::<T>::new(&reader, BATCH_SIZE.try_into().unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(iter.len(), expected_rows.len());
+    for (i, expected_row) in expected_rows.iter().enumerate() {
+        assert_eq!(
+            expected_rows.len() - i,
+            iter.len(),
+            "Number of rows changed halfway (at row {})",
+            i
+        );
+        assert_eq!(
+            iter.next().as_ref(),
+            Some(expected_row),
+            "Inconsistent row #{}",
+            i
+        );
+    }
+    assert_eq!(iter.next(), None, "Too many rows");
+
+    // Test manual iteration backward
+    for (i, expected_row) in expected_rows.iter().rev().enumerate() {
+        assert_eq!(
+            i,
+            iter.len(),
+            "Number of rows changed halfway (at row {})",
+            i
+        );
+        assert_eq!(
+            iter.next_back().as_ref(),
+            Some(expected_row),
+            "Inconsistent row #{}",
+            expected_rows.len() - i - 1
+        );
+    }
+    assert_eq!(iter.next_back(), None, "Too many rows backward");
+
+    // Go halfway then back
+    assert_eq!(iter.next().as_ref(), Some(&expected_rows[0]));
+    assert_eq!(iter.next_back().as_ref(), Some(&expected_rows[0]));
+    assert_eq!(iter.next_back().as_ref(), None);
+
+    // Go full forward, rewind halfway, then forward again
+    for expected_row in expected_rows.iter() {
+        assert_eq!(iter.next().as_ref(), Some(expected_row));
+    }
+    assert_eq!(
+        iter.next_back().as_ref(),
+        Some(&expected_rows[expected_rows.len() - 1])
+    );
+    assert_eq!(
+        iter.next().as_ref(),
+        Some(&expected_rows[expected_rows.len() - 1])
+    );
+    assert_eq!(iter.next().as_ref(), None);
 }
 
 fn test<T: CheckableKind + OrcDeserialize + OrcStruct + Clone + PartialEq + std::fmt::Debug>(
