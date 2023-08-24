@@ -26,6 +26,13 @@ namespace orcxx_rs {
           return std::make_unique<T>(args...);
         }
 
+        template<typename T>
+        std::unique_ptr<T>
+        construct_copy(std::unique_ptr<T> const &obj)
+        {
+          return std::make_unique<T>(T(*obj));
+        }
+
         template<typename T, typename Ret>
         Ret
         try_into(T obj) {

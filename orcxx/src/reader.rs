@@ -24,6 +24,9 @@ pub(crate) mod ffi {
         #[rust_name = "RowReaderOptions_new"]
         fn construct() -> UniquePtr<RowReaderOptions>;
 
+        #[rust_name = "RowReaderOptions_copy"]
+        fn construct_copy(_: &UniquePtr<RowReaderOptions>) -> UniquePtr<RowReaderOptions>;
+
         #[rust_name = "StringList_new"]
         fn construct() -> UniquePtr<StringList>;
     }
@@ -199,7 +202,14 @@ impl RowReaderOptions {
     }
 }
 
+impl Clone for RowReaderOptions {
+    fn clone(&self) -> RowReaderOptions {
+        RowReaderOptions(ffi::RowReaderOptions_copy(&self.0))
+    }
+}
+
 unsafe impl Send for RowReaderOptions {}
+unsafe impl Sync for RowReaderOptions {}
 
 /// Reads rows from ORC files to a raw [`vector::OwnedColumnVectorBatch`]
 pub struct RowReader(UniquePtr<ffi::RowReader>);
