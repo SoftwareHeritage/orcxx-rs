@@ -368,7 +368,7 @@ macro_rules! init_list_read {
         elements.resize_with(num_elements, Default::default);
         OrcDeserialize::read_from_vector_batch::<Vec<I>>(&src.elements(), &mut elements)?;
 
-        let elements = elements.into_iter().enumerate();
+        let elements = elements.into_iter();
 
         (src, elements)
     }};
@@ -386,15 +386,16 @@ macro_rules! build_list_item {
         );
         // Safe because offset is bounded by num_elements;
         let mut array: Vec<I> = Vec::with_capacity((range.end - range.start) as usize);
-        loop {
+        for _ in range.clone() {
             match $elements.next() {
-                Some((i, item)) => {
+                Some(item) => {
                     array.push(item);
-                    if i == range.end - 1 {
-                        break;
-                    }
                 }
-                None => panic!("List too short"),
+                None => panic!(
+                    "List too short (expected {} elements, got {})",
+                    range.end - range.start,
+                    array.len()
+                ),
             }
         }
         $last_offset = range.end;
