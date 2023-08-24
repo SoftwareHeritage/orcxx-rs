@@ -1,3 +1,27 @@
+# v0.3.0
+
+*2023-08-25*
+
+Breaking:
+
+* Make `Reader::row_reader()` take a ref instead of owned RowReaderOptions
+
+Additions:
+
+* Add ParallelRowIterator
+* Implement ExactSizeIterator and DoubleEndedIterator for RowIterator
+* Implement `row_number()` and `seek_to_row()` for RowReader
+* Impl Sync and Clone for RowReaderOptions
+* Implement Send for vectors
+
+Fixes: 
+
+* Fix empty list deserialization
+
+Internal:
+
+* `orcxx_derive/tests/test1.rs`: Test more batch sizes (+deduplicate)
+
 # v0.2.3
 
 *2023-08-09*
