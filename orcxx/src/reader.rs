@@ -93,6 +93,8 @@ pub(crate) mod ffi {
         fn next(self: Pin<&mut RowReader>, data: Pin<&mut ColumnVectorBatch>) -> bool;
 
         fn getSelectedType(&self) -> &Type;
+        fn getRowNumber(&self) -> u64;
+        fn seekToRow(self: Pin<&mut RowReader>, rowNumber: u64);
     }
 
     #[namespace = "orc"]
@@ -234,6 +236,16 @@ impl RowReader {
     /// Otherwise this is usually a subset [`Reader::kind`].
     pub fn selected_kind(&self) -> kind::Kind {
         kind::Kind::new_from_orc_type(self.0.getSelectedType())
+    }
+
+    /// Get the row number of the first row in the previously read batch.
+    pub fn get_row_number(&self) -> u64 {
+        self.0.getRowNumber()
+    }
+
+    /// Seek to a given row.
+    pub fn seek_to_row(&mut self, row_number: u64) {
+        self.0.pin_mut().seekToRow(row_number)
     }
 }
 

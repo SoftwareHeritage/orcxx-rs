@@ -152,3 +152,122 @@ fn read_file() {
             .collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn seek() {
+    let input_stream = reader::InputStream::from_local_file("orc/examples/TestOrcFile.test1.orc")
+        .expect("Could not read");
+    let reader = reader::Reader::new(input_stream).expect("Could not create reader");
+
+    let mut row_reader = reader
+        .row_reader(&reader::RowReaderOptions::default())
+        .unwrap();
+
+    let read_to_end = |row_reader: &mut reader::RowReader| {
+        let mut total_elements = 0;
+        let mut all_ints: Vec<i64> = Vec::new();
+        let mut all_strings: Vec<String> = Vec::new();
+
+        let mut batch = row_reader.row_batch(1024);
+        while row_reader.read_into(&mut batch) {
+            total_elements += (&batch).num_elements();
+
+            let struct_vector = batch
+                .borrow()
+                .try_into_structs()
+                .expect("could not cast ColumnVectorBatch to StructDataBuffer");
+            let vectors = struct_vector.fields();
+
+            for vector in vectors {
+                match vector.try_into_longs() {
+                    Ok(int_vector) => {
+                        for i in int_vector.iter() {
+                            all_ints.push(i.unwrap())
+                        }
+                    }
+                    Err(e) => println!("failed to cast to LongDataBuffer: {:?}", e),
+                }
+                match vector.try_into_strings() {
+                    Ok(string_vector) => {
+                        for s in string_vector.iter() {
+                            all_strings.push(
+                                std::str::from_utf8(s.unwrap_or(b"<null>"))
+                                    .unwrap_or("<not utf8>")
+                                    .to_owned(),
+                            )
+                        }
+                    }
+                    Err(e) => println!("failed to cast to StringDataBuffer: {:?}", e),
+                }
+            }
+        }
+
+        (total_elements, all_ints, all_strings)
+    };
+
+    let (total_elements, all_ints, all_strings) = read_to_end(&mut row_reader);
+
+    assert_eq!(total_elements, 2);
+    assert_eq!(
+        all_ints,
+        vec![
+            0,
+            1,
+            1,
+            100,
+            1024,
+            2048,
+            65536,
+            65536,
+            9223372036854775807,
+            9223372036854775807
+        ],
+    );
+    assert_eq!(
+        all_strings,
+        vec!["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
+            .iter()
+            .map(|s| s.to_owned())
+            .collect::<Vec<_>>()
+    );
+
+    row_reader.seek_to_row(0);
+    let (total_elements, all_ints, all_strings) = read_to_end(&mut row_reader);
+
+    assert_eq!(total_elements, 2);
+    assert_eq!(
+        all_ints,
+        vec![
+            0,
+            1,
+            1,
+            100,
+            1024,
+            2048,
+            65536,
+            65536,
+            9223372036854775807,
+            9223372036854775807
+        ],
+    );
+    assert_eq!(
+        all_strings,
+        vec!["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
+            .iter()
+            .map(|s| s.to_owned())
+            .collect::<Vec<_>>()
+    );
+
+    row_reader.seek_to_row(1);
+    let (total_elements, all_ints, all_strings) = read_to_end(&mut row_reader);
+
+    assert_eq!(total_elements, 1);
+    assert_eq!(all_ints, vec![1, 100, 2048, 65536, 9223372036854775807],);
+    assert_eq!(
+        all_strings,
+        vec!["", "bye"]
+            .iter()
+            .map(|s| s.to_owned())
+            .collect::<Vec<_>>()
+    );
+}
