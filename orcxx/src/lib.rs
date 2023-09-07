@@ -107,6 +107,7 @@ extern crate rayon;
 extern crate unsafe_unwrap;
 
 pub mod deserialize;
+pub mod errors;
 mod int128;
 pub mod kind;
 mod memorypool;
@@ -115,7 +116,6 @@ pub mod parallel_row_iterator;
 pub mod reader;
 pub mod row_iterator;
 pub mod structured_reader;
-pub mod utils;
 pub mod vector;
 
 #[cfg(feature = "json")]

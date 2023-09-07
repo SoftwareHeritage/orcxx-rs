@@ -11,7 +11,7 @@
 //! avoid clashes with the Rust keyword.
 use cxx::let_cxx_string;
 
-use utils::OrcResult;
+use errors::OrcResult;
 
 #[cxx::bridge]
 pub(crate) mod ffi {

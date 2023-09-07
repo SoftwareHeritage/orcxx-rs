@@ -16,8 +16,8 @@ use std::num::TryFromIntError;
 use std::slice::IterMut;
 use std::str::Utf8Error;
 
+use errors::OrcError;
 use kind::Kind;
-use utils::OrcError;
 use vector::{BorrowedColumnVectorBatch, ColumnVectorBatch, DecimalVectorBatch, StructVectorBatch};
 
 #[derive(Debug, PartialEq)]

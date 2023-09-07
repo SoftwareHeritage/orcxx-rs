@@ -14,10 +14,10 @@
 //! in this crate to implement it.
 
 use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
+use errors::OrcError;
 use reader::{Reader, RowReader, RowReaderOptions};
 use std::convert::TryInto;
 use std::num::NonZeroU64;
-use utils::OrcError;
 use vector::OwnedColumnVectorBatch;
 
 /// Iterator on rows of the given [`RowReader`].

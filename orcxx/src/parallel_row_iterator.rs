@@ -14,12 +14,12 @@
 //! in this crate to implement it.
 
 use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
+use errors::OrcError;
 use reader::{Reader, RowReaderOptions};
 use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::num::NonZeroU64;
 use std::sync::Arc;
-use utils::OrcError;
 
 use rayon::iter::plumbing::{bridge, Consumer, Producer, ProducerCallback};
 use rayon::prelude::*;

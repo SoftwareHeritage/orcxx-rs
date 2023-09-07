@@ -19,8 +19,8 @@ use std::ptr;
 use cxx::UniquePtr;
 use rust_decimal::Decimal;
 
+use errors::{OrcError, OrcResult};
 use memorypool;
-use utils::{OrcError, OrcResult};
 
 // TODO: remove $function_name when https://github.com/rust-lang/rust/issues/29599
 // is stabilized

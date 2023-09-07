@@ -7,8 +7,8 @@
 
 use cxx::{let_cxx_string, UniquePtr};
 
+use errors::{OrcError, OrcResult};
 use kind;
-use utils::{OrcError, OrcResult};
 use vector;
 
 #[cxx::bridge]

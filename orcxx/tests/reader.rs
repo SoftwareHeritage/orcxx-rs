@@ -18,7 +18,7 @@ use orcxx::*;
 #[test]
 fn nonexistent_file() {
     let stream_res = reader::InputStream::from_local_file("orc/examples/nonexistent.orc");
-    assert!(matches!(stream_res, Err(utils::OrcError(_))));
+    assert!(matches!(stream_res, Err(errors::OrcError(_))));
 }
 
 /// Asserts reading an empty file returns an Error
@@ -28,7 +28,7 @@ fn empty_file() {
     let stream_res = reader::InputStream::from_local_file(&temp_file.path().display().to_string())
         .expect("could not open local file");
     let reader = reader::Reader::new(stream_res);
-    assert!(matches!(reader, Err(utils::OrcError(_))))
+    assert!(matches!(reader, Err(errors::OrcError(_))))
 }
 
 /// Asserts reading gibberish returns an Error
@@ -40,7 +40,7 @@ fn nonorc_file() {
     let stream_res = reader::InputStream::from_local_file(&temp_file.path().display().to_string())
         .expect("could not open local file");
     let reader = reader::Reader::new(stream_res);
-    assert!(matches!(reader, Err(utils::OrcError(_))))
+    assert!(matches!(reader, Err(errors::OrcError(_))))
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn select_nonexistent_column() {
     let options = reader::RowReaderOptions::default().include_names(vec!["abc", "def"]);
     assert!(matches!(
         reader.row_reader(&options),
-        Err(utils::OrcError(_))
+        Err(errors::OrcError(_))
     ));
 }
 
