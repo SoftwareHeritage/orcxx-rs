@@ -8,6 +8,7 @@
 #![allow(clippy::redundant_closure_call)]
 
 use rust_decimal::Decimal;
+use thiserror::Error;
 pub use unsafe_unwrap::UnsafeUnwrap;
 
 use std::convert::TryInto;
@@ -20,31 +21,35 @@ use errors::OrcError;
 use kind::Kind;
 use vector::{BorrowedColumnVectorBatch, ColumnVectorBatch, DecimalVectorBatch, StructVectorBatch};
 
-#[derive(Debug, PartialEq)]
+/// Error returned when failing to read a particular batch of data
+#[derive(Debug, Error, PartialEq)]
 pub enum DeserializationError {
     /// Expected to parse a structure from the ORC file, but the given column is of
     /// an incompatible type. Contains the ORC exception whiched occured when casting.
+    #[error("Mismatched ORC column type: {0}")]
     MismatchedColumnKind(OrcError),
     /// The structure has a field which was not selected when reading the ORC file (or
     /// is missing from the file).
     /// Contains the name of the field.
+    #[error("Field {0} is missing from ORC file")]
     MissingField(String),
     /// u64 could not be converted to usize. Contains the original error
+    #[error("Number of items exceeds maximum buffer capacity on this platform: {0}")]
     UsizeOverflow(TryFromIntError),
-    /// [`Vec::from_vector_batch`](OrcDeserialize::from_vector_batch) was
-    /// called on a non-empty [`Vec`]
-    NonEmptyVector,
     /// Failed to decode a [`String`] (use [`Vec<u8>`](`Vec`) instead for columns of
     /// `binary` type).
+    #[error("Failed to decode ORC byte string as UTF-8: {0}")]
     Utf8Error(Utf8Error),
     /// [`read_from_vector_batch`](OrcDeserialize::read_from_vector_batch) or
     /// [`from_vector_batch`](OrcDeserialize::from_vector_batch) orwas called
     /// as a method on a non-`Option` type, with a column containing nulls as parameter.
     ///
     /// Contains a human-readable error.
+    #[error("Unexpected null value in ORC file: {0}")]
     UnexpectedNull(String),
     /// [`read_from_vector_batch`](OrcDeserialize::read_from_vector_batch) was given
     /// a `src` column batch longer than its a `dst` vector.
+    #[error("Tried to deserialize {src}-long buffer into {dst}-long buffer")]
     MismatchedLength { src: u64, dst: u64 },
 }
 

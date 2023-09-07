@@ -40,7 +40,6 @@ fn test_seek() {
 
     let seq_rows = RowIterator::<Row>::new(&reader, 10.try_into().unwrap())
         .unwrap()
-        .unwrap()
         .collect::<Vec<_>>();
 
     let reader = Arc::new(reader);
@@ -49,13 +48,11 @@ fn test_seek() {
         seq_rows,
         ParallelRowIterator::<Row>::new(reader.clone(), 10.try_into().unwrap())
             .unwrap()
-            .unwrap()
             .collect::<Vec<_>>(),
     );
 
     let mut par_rows = Vec::new();
     ParallelRowIterator::<Row>::new(reader, 10.try_into().unwrap())
-        .unwrap()
         .unwrap()
         .collect_into_vec(&mut par_rows);
     assert_eq!(seq_rows, par_rows);

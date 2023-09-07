@@ -5,6 +5,9 @@
 
 use std::fmt;
 
+use thiserror::Error;
+
+/// Wrapper for exceptions thrown by the underlying C++ library
 #[derive(Debug)]
 pub struct OrcError(pub cxx::Exception);
 
@@ -35,3 +38,11 @@ impl OrcError {
 }
 
 pub type OrcResult<T> = Result<T, OrcError>;
+
+#[derive(Error, Debug)]
+pub enum OpenOrcError {
+    #[error("Could not open ORC file for reading: {0}")]
+    OrcError(OrcError),
+    #[error("Unexpected ORC file type: {0}")]
+    KindError(String),
+}

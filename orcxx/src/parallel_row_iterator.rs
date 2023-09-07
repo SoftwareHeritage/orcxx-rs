@@ -14,7 +14,7 @@
 //! in this crate to implement it.
 
 use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
-use errors::OrcError;
+use errors::OpenOrcError;
 use reader::{Reader, RowReaderOptions};
 use std::convert::TryInto;
 use std::marker::PhantomData;
@@ -60,7 +60,7 @@ impl<T: OrcDeserialize + OrcStruct + CheckableKind + Clone> ParallelRowIterator<
     pub fn new(
         reader: Arc<Reader>,
         batch_size: NonZeroU64,
-    ) -> Result<Result<ParallelRowIterator<T>, String>, OrcError> {
+    ) -> Result<ParallelRowIterator<T>, OpenOrcError> {
         let options = RowReaderOptions::default().include_names(T::columns());
         Self::new_with_options(reader, batch_size, options)
     }
@@ -79,24 +79,27 @@ impl<T: OrcDeserialize + Clone> ParallelRowIterator<T> {
         reader: Arc<Reader>,
         batch_size: NonZeroU64,
         options: RowReaderOptions,
-    ) -> Result<Result<ParallelRowIterator<T>, String>, OrcError> {
-        match T::check_kind(&reader.row_reader(&options)?.selected_kind()) {
+    ) -> Result<ParallelRowIterator<T>, OpenOrcError> {
+        let row_reader = reader
+            .row_reader(&options)
+            .map_err(OpenOrcError::OrcError)?;
+        match T::check_kind(&row_reader.selected_kind()) {
             Ok(_) => (),
-            Err(msg) => return Ok(Err(msg)),
+            Err(msg) => return Err(OpenOrcError::KindError(msg)),
         }
 
         let row_count = reader
             .row_count()
             .try_into()
             .expect("row count overflows usize");
-        Ok(Ok(ParallelRowIterator {
+        Ok(ParallelRowIterator {
             reader: reader,
             row_reader_options: options,
             batch_size,
             start: 0,
             end: row_count,
             marker: PhantomData,
-        }))
+        })
     }
 }
 
@@ -155,7 +158,6 @@ impl<'a, T: OrcDeserialize + Clone + Send + Sync> Producer for RowProducer<'a, T
             &self.iter.row_reader_options,
         )
         .expect("Could not create RowIterator") // Should be fine, was checked before
-        .expect("Could not create RowIterator") // ditto
         .seek(start)
         .take(self.end - self.start) // TODO: tune the RowProducer buffer accordingly?
     }

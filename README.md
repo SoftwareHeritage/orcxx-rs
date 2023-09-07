@@ -38,7 +38,6 @@ let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
 let batch_size = NonZeroU64::new(1024).unwrap();
 let mut rows: Vec<Option<Test1>> = RowIterator::new(&reader, batch_size)
     .expect("Could not open ORC file")
-    .expect("Unexpected schema")
     .collect();
 
 assert_eq!(

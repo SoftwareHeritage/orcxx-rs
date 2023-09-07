@@ -13,11 +13,12 @@
 //! files have a structure at the root and we can't use `#[derive(OrcDeserialize)]`
 //! in this crate to implement it.
 
-use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
-use errors::OrcError;
-use reader::{Reader, RowReader, RowReaderOptions};
 use std::convert::TryInto;
 use std::num::NonZeroU64;
+
+use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
+use errors::OpenOrcError;
+use reader::{Reader, RowReader, RowReaderOptions};
 use vector::OwnedColumnVectorBatch;
 
 /// Iterator on rows of the given [`RowReader`].
@@ -57,10 +58,7 @@ impl<T: OrcDeserialize + OrcStruct + CheckableKind + Clone> RowIterator<T> {
     /// # Panics
     ///
     /// When `batch_size` is larger than `usize`.
-    pub fn new(
-        reader: &Reader,
-        batch_size: NonZeroU64,
-    ) -> Result<Result<RowIterator<T>, String>, OrcError> {
+    pub fn new(reader: &Reader, batch_size: NonZeroU64) -> Result<RowIterator<T>, OpenOrcError> {
         let options = RowReaderOptions::default().include_names(T::columns());
         Self::new_with_options(reader, batch_size, &options)
     }
@@ -79,24 +77,24 @@ impl<T: OrcDeserialize + Clone> RowIterator<T> {
         reader: &Reader,
         batch_size: NonZeroU64,
         options: &RowReaderOptions,
-    ) -> Result<Result<RowIterator<T>, String>, OrcError> {
-        let mut row_reader = reader.row_reader(options)?;
+    ) -> Result<RowIterator<T>, OpenOrcError> {
+        let mut row_reader = reader.row_reader(options).map_err(OpenOrcError::OrcError)?;
         match T::check_kind(&row_reader.selected_kind()) {
             Ok(_) => (),
-            Err(msg) => return Ok(Err(msg)),
+            Err(msg) => return Err(OpenOrcError::KindError(msg)),
         }
         let batch_size: u64 = batch_size.into();
         let batch_size_usize = batch_size.try_into().expect("batch_size overflows usize");
         let mut decoded_batch = Vec::with_capacity(batch_size_usize);
         decoded_batch.resize_with(batch_size_usize, Default::default);
-        Ok(Ok(RowIterator {
+        Ok(RowIterator {
             batch: row_reader.row_batch(batch_size),
             row_reader,
             decoded_batch,
             index: 0,
             decoded_items: 0, // Will be filled on the first run of next()
             row_count: reader.row_count(),
-        }))
+        })
     }
 
     pub fn seek(mut self, row_number: u64) -> Self {

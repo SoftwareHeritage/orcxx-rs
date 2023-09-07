@@ -64,7 +64,6 @@ fn test_with_batch_size<
             &get_row_reader_options()
         )
         .unwrap()
-        .unwrap()
         .collect::<Vec<_>>(),
         "Inconsistent set of rows when using RowIterator"
     );
@@ -73,15 +72,12 @@ fn test_with_batch_size<
         expected_rows,
         RowIterator::<T>::new(&reader, BATCH_SIZE.try_into().unwrap())
             .unwrap()
-            .unwrap()
             .collect::<Vec<_>>(),
         "Inconsistent set of rows when RowIterator constructed with default options"
     );
 
     // Test manual iteration
-    let mut iter = RowIterator::<T>::new(&reader, BATCH_SIZE.try_into().unwrap())
-        .unwrap()
-        .unwrap();
+    let mut iter = RowIterator::<T>::new(&reader, BATCH_SIZE.try_into().unwrap()).unwrap();
     assert_eq!(iter.len(), expected_rows.len());
     for (i, expected_row) in expected_rows.iter().enumerate() {
         assert_eq!(
