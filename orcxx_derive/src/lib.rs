@@ -376,7 +376,7 @@ fn impl_struct(ident: &Ident, field_names: Vec<&Ident>, field_types: Vec<&Type>)
                         &format!("Failed to get '{}' column", stringify!(#field_names)));
                     OrcDeserialize::read_from_vector_batch::<::orcxx::deserialize::MultiMap<&mut T, _>>(
                         &column,
-                        &mut dst.map(|struct_| &mut unsafe { ::orcxx::deserialize::UnsafeUnwrap::unsafe_unwrap(struct_.as_mut()) }.#field_names),
+                        &mut dst.map(|struct_| &mut unsafe { struct_.as_mut().unwrap_unchecked() }.#field_names),
                     )?;
                 )*
 

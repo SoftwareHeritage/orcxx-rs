@@ -9,7 +9,6 @@
 
 use rust_decimal::Decimal;
 use thiserror::Error;
-pub use unsafe_unwrap::UnsafeUnwrap;
 
 use std::convert::TryInto;
 use std::iter::Map;
@@ -433,7 +432,7 @@ where
         for offset in offsets {
             // Safe because we checked dst.len() == num_elements, and num_elements
             // is also the size of offsets
-            let dst_item: &mut Option<Vec<I>> = unsafe { dst.next().unsafe_unwrap() };
+            let dst_item: &mut Option<Vec<I>> = unsafe { dst.next().unwrap_unchecked() };
             match offset {
                 None => *dst_item = None,
                 Some(range) => {
@@ -475,7 +474,7 @@ where
                 for range in offsets {
                     // Safe because we checked dst.len() == num_elements, and num_elements
                     // is also the size of offsets
-                    let dst_item: &mut Vec<I> = unsafe { dst.next().unsafe_unwrap() };
+                    let dst_item: &mut Vec<I> = unsafe { dst.next().unwrap_unchecked() };
 
                     *dst_item = build_list_item!(range, last_offset, elements);
                 }

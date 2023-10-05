@@ -105,7 +105,6 @@ extern crate cxx;
 #[cfg(feature = "rayon")]
 extern crate rayon;
 extern crate thiserror;
-extern crate unsafe_unwrap;
 
 pub mod deserialize;
 pub mod errors;

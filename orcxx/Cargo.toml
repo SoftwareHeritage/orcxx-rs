@@ -41,7 +41,6 @@ chrono = { version = "0.4.26", optional = true }
 # TODO: Make rust_decimal optional
 rust_decimal = "1.30.0"
 thiserror = "1.0.48"
-unsafe_unwrap = "0.1.0"
 rayon = { workspace = true, optional = true }
 
 [build-dependencies]
