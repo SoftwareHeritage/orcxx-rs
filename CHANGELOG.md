@@ -1,3 +1,20 @@
+# v0.4.0
+
+*2023-10-13*
+
+Breaking:
+
+* Use `thiserror` instead of nested `Result`
+* Rename 'utils' module to 'errors'
+
+Additions:
+
+* Add support for deserializing Timestamp as i64 struct field
+
+Internal:
+
+* Replace `unsafe_unwrap` with stdlib's `unwrap_unchecked`
+
 # v0.3.0
 
 *2023-08-25*
