@@ -52,13 +52,23 @@ pub enum DeserializationError {
     MismatchedLength { src: u64, dst: u64 },
 }
 
-fn check_kind_equals(got_kind: &Kind, expected_kind: &Kind, type_name: &str) -> Result<(), String> {
-    if got_kind == expected_kind {
+fn check_kind_equals(
+    got_kind: &Kind,
+    expected_kinds: &[Kind],
+    type_name: &str,
+) -> Result<(), String> {
+    if expected_kinds.contains(got_kind) {
         Ok(())
     } else {
         Err(format!(
-            "{} must be decoded from ORC {:?}, not ORC {:?}",
-            type_name, expected_kind, got_kind
+            "{} must be decoded from ORC {}, not ORC {:?}",
+            type_name,
+            expected_kinds
+                .iter()
+                .map(|k| format!("{:?}", k))
+                .collect::<Vec<_>>()
+                .join("/"),
+            got_kind
         ))
     }
 }
@@ -214,19 +224,19 @@ macro_rules! impl_scalar {
     };
 }
 
-impl_scalar!(bool, Kind::Boolean, try_into_longs, |s| Ok(s != 0));
-impl_scalar!(i8, Kind::Byte, try_into_longs);
-impl_scalar!(i16, Kind::Short, try_into_longs);
-impl_scalar!(i32, Kind::Int, try_into_longs);
-impl_scalar!(i64, Kind::Long, try_into_longs);
-impl_scalar!(f32, Kind::Float, try_into_doubles);
-impl_scalar!(f64, Kind::Double, try_into_doubles);
-impl_scalar!(String, Kind::String, try_into_strings, |s| {
+impl_scalar!(bool, [Kind::Boolean], try_into_longs, |s| Ok(s != 0));
+impl_scalar!(i8, [Kind::Byte], try_into_longs);
+impl_scalar!(i16, [Kind::Short], try_into_longs);
+impl_scalar!(i32, [Kind::Int], try_into_longs);
+impl_scalar!(i64, [Kind::Long, Kind::Timestamp], try_into_longs);
+impl_scalar!(f32, [Kind::Float], try_into_doubles);
+impl_scalar!(f64, [Kind::Double], try_into_doubles);
+impl_scalar!(String, [Kind::String], try_into_strings, |s| {
     std::str::from_utf8(s)
         .map_err(DeserializationError::Utf8Error)
         .map(|s| s.to_string())
 });
-impl_scalar!(Vec<u8>, Kind::Binary, try_into_strings, |s: &[u8]| Ok(
+impl_scalar!(Vec<u8>, [Kind::Binary], try_into_strings, |s: &[u8]| Ok(
     s.to_vec()
 ));
 
@@ -626,7 +636,7 @@ mod tests {
             fn check_kind(kind: &Kind) -> Result<(), String> {
                 check_kind_equals(
                     kind,
-                    &Kind::Struct(vec![("field1".to_owned(), Kind::Long)]),
+                    &[Kind::Struct(vec![("field1".to_owned(), Kind::Long)])],
                     "Vec<u8>",
                 )
             }
@@ -658,6 +668,7 @@ mod tests {
     #[test]
     fn test_check_kind() {
         assert_eq!(i64::check_kind(&Kind::Long), Ok(()));
+        assert_eq!(i64::check_kind(&Kind::Timestamp), Ok(()));
         assert_eq!(String::check_kind(&Kind::String), Ok(()));
         assert_eq!(Vec::<u8>::check_kind(&Kind::Binary), Ok(()));
     }
@@ -666,11 +677,11 @@ mod tests {
     fn test_check_kind_fail() {
         assert_eq!(
             i64::check_kind(&Kind::String),
-            Err("i64 must be decoded from ORC Long, not ORC String".to_string())
+            Err("i64 must be decoded from ORC Long/Timestamp, not ORC String".to_string())
         );
         assert_eq!(
             i64::check_kind(&Kind::Int),
-            Err("i64 must be decoded from ORC Long, not ORC Int".to_string())
+            Err("i64 must be decoded from ORC Long/Timestamp, not ORC Int".to_string())
         );
         assert_eq!(
             String::check_kind(&Kind::Int),
