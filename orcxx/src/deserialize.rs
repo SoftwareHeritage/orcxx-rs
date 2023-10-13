@@ -228,7 +228,7 @@ impl_scalar!(bool, [Kind::Boolean], try_into_longs, |s| Ok(s != 0));
 impl_scalar!(i8, [Kind::Byte], try_into_longs);
 impl_scalar!(i16, [Kind::Short], try_into_longs);
 impl_scalar!(i32, [Kind::Int], try_into_longs);
-impl_scalar!(i64, [Kind::Long, Kind::Timestamp], try_into_longs);
+impl_scalar!(i64, [Kind::Long], try_into_longs);
 impl_scalar!(f32, [Kind::Float], try_into_doubles);
 impl_scalar!(f64, [Kind::Double], try_into_doubles);
 impl_scalar!(String, [Kind::String], try_into_strings, |s| {
@@ -239,6 +239,16 @@ impl_scalar!(String, [Kind::String], try_into_strings, |s| {
 impl_scalar!(Vec<u8>, [Kind::Binary], try_into_strings, |s: &[u8]| Ok(
     s.to_vec()
 ));
+
+impl_scalar!(
+    crate::Timestamp,
+    [Kind::Timestamp],
+    try_into_timestamps,
+    |s: (i64, i64)| Ok(crate::Timestamp {
+        seconds: s.0,
+        nanoseconds: s.1
+    })
+);
 
 impl OrcStruct for Decimal {
     fn columns_with_prefix(prefix: &str) -> Vec<String> {

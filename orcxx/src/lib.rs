@@ -125,3 +125,10 @@ extern crate json;
 extern crate rust_decimal;
 #[cfg(feature = "json")]
 pub mod to_json;
+
+/// ORC timestamp (timezone-less)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct Timestamp {
+    pub seconds: i64,
+    pub nanoseconds: i64,
+}

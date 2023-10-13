@@ -1,3 +1,11 @@
+# v0.4.2
+
+*2023-10-13*
+
+Fixes:
+
+* Fix decoding of timestamps, they are not a single i64 as I thought
+
 # v0.4.1
 
 *2023-10-13*
