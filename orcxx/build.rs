@@ -73,7 +73,7 @@ struct OrcxxBuild<'a> {
 impl<'a> OrcxxBuild<'a> {
     /// Configures Apache ORC build
     fn run_cmake(&self) {
-        let env = if std::env::var("DOCS_RS").is_ok() {
+        let mut env = if std::env::var("DOCS_RS").is_ok() {
             // Force use of system libraries instead of downloading them
             vec![
                 ("PROTOBUF_HOME", "/usr"),
@@ -87,6 +87,7 @@ impl<'a> OrcxxBuild<'a> {
         } else {
             vec![]
         };
+        env.push(("CFLAGS", "-fPIC"));
 
         let status = process::Command::new("cmake")
             .arg(self.orc_src_dir)
