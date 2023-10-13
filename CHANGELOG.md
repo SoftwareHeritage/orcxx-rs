@@ -1,3 +1,11 @@
+# v0.4.1
+
+*2023-10-13*
+
+Fixes:
+
+* Make `orcxx_derive` depend on `orcxx` 0.4 instead of 0.3
+
 # v0.4.0
 
 *2023-10-13*
