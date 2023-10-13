@@ -88,6 +88,7 @@ impl<'a> OrcxxBuild<'a> {
             vec![]
         };
         env.push(("CFLAGS", "-fPIC"));
+        env.push(("CXXFLAGS", "-fPIC"));
 
         let status = process::Command::new("cmake")
             .arg(self.orc_src_dir)
@@ -109,6 +110,8 @@ impl<'a> OrcxxBuild<'a> {
         // Run make
         let status = process::Command::new("make")
             .env("MAKEFLAGS", make_flags)
+            .env("CFLAGS", "-fPIC")
+            .env("CXXFLAGS", "-fPIC")
             .current_dir(self.orc_build_dir)
             .status()
             .expect("failed to run make");
