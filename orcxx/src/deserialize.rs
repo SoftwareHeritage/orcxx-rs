@@ -678,7 +678,7 @@ mod tests {
     #[test]
     fn test_check_kind() {
         assert_eq!(i64::check_kind(&Kind::Long), Ok(()));
-        assert_eq!(i64::check_kind(&Kind::Timestamp), Ok(()));
+        assert_eq!(crate::Timestamp::check_kind(&Kind::Timestamp), Ok(()));
         assert_eq!(String::check_kind(&Kind::String), Ok(()));
         assert_eq!(Vec::<u8>::check_kind(&Kind::Binary), Ok(()));
     }
@@ -687,11 +687,11 @@ mod tests {
     fn test_check_kind_fail() {
         assert_eq!(
             i64::check_kind(&Kind::String),
-            Err("i64 must be decoded from ORC Long/Timestamp, not ORC String".to_string())
+            Err("i64 must be decoded from ORC Long, not ORC String".to_string())
         );
         assert_eq!(
             i64::check_kind(&Kind::Int),
-            Err("i64 must be decoded from ORC Long/Timestamp, not ORC Int".to_string())
+            Err("i64 must be decoded from ORC Long, not ORC Int".to_string())
         );
         assert_eq!(
             String::check_kind(&Kind::Int),
