@@ -3,6 +3,10 @@ use std::fs;
 use std::path::Path;
 use std::process;
 
+extern crate thiserror;
+
+use thiserror::Error;
+
 const BRIDGE_MODULES: [&str; 5] = [
     "src/kind.rs",
     "src/int128.rs",
@@ -11,7 +15,25 @@ const BRIDGE_MODULES: [&str; 5] = [
     "src/vector.rs",
 ];
 
+#[derive(Error, Debug)]
+pub enum BuildError {
+    #[error("Could not run CMake: {0}")]
+    CmakeStartError(std::io::Error),
+    #[error("CMake returned exit code {0}")]
+    CmakeStatus(process::ExitStatus),
+    #[error("Could not run Make: {0}")]
+    MakeStartError(std::io::Error),
+    #[error("Make returned exit code {0}")]
+    MakeStatus(process::ExitStatus),
+}
+
 fn main() {
+    if let Err(e) = main_() {
+        eprintln!("Failed to build the ORC C++ Core library: {}", e);
+        process::exit(1);
+    }
+}
+fn main_() -> Result<(), BuildError> {
     let make_flags = env::var("CARGO_MAKEFLAGS").expect("Missing CARGO_MAKEFLAGS");
 
     let out_dir = env::var("OUT_DIR").expect("Missing OUT_DIR");
@@ -50,8 +72,8 @@ fn main() {
         orc_build_include_dir,
     };
 
-    build.run_cmake();
-    build.run_make(&make_flags);
+    build.run_cmake()?;
+    build.run_make(&make_flags)?;
     build.build_bridge();
     build.link_bridge();
     build.link_cpp_deps();
@@ -61,6 +83,8 @@ fn main() {
         println!("cargo:rerun-if-changed={}/{}", manifest_dir, module);
     }
     println!("cargo:rerun-if-changed={}/src/cpp-utils.hh", manifest_dir);
+
+    Ok(())
 }
 
 struct OrcxxBuild<'a> {
@@ -72,7 +96,7 @@ struct OrcxxBuild<'a> {
 
 impl<'a> OrcxxBuild<'a> {
     /// Configures Apache ORC build
-    fn run_cmake(&self) {
+    fn run_cmake(&self) -> Result<(), BuildError> {
         let env = if std::env::var("DOCS_RS").is_ok()
             || std::env::var("ORC_USE_SYSTEM_LIBRARIES").is_ok()
         {
@@ -98,24 +122,28 @@ impl<'a> OrcxxBuild<'a> {
             .envs(env)
             .current_dir(self.orc_build_dir)
             .status()
-            .expect("failed to run cmake");
+            .map_err(BuildError::CmakeStartError)?;
 
-        if status.code().expect("cmake returned no status code") != 0 {
-            panic!("cmake returned {}", status);
+        if status.code().expect("cmake returned no status code") == 0 {
+            Ok(())
+        } else {
+            Err(BuildError::CmakeStatus(status))
         }
     }
 
     /// Builds Apache ORC C++
-    fn run_make(&self, make_flags: &str) {
+    fn run_make(&self, make_flags: &str) -> Result<(), BuildError> {
         // Run make
         let status = process::Command::new("make")
             .env("MAKEFLAGS", make_flags)
             .current_dir(self.orc_build_dir)
             .status()
-            .expect("failed to run make");
+            .map_err(BuildError::MakeStartError)?;
 
-        if status.code().expect("make returned no status code") != 0 {
-            panic!("make returned {}", status);
+        if status.code().expect("cmake returned no status code") == 0 {
+            Ok(())
+        } else {
+            Err(BuildError::MakeStatus(status))
         }
     }
 

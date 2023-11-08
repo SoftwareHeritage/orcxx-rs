@@ -45,6 +45,7 @@ rayon = { workspace = true, optional = true }
 
 [build-dependencies]
 cxx-build = "1.0"
+thiserror = "1.0.48"
 
 [dev-dependencies]
 flate2 = "1.0"
