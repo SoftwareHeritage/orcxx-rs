@@ -3,7 +3,8 @@
 Rust wrapper for the official C++ library for Apache ORC.
 
 It uses a submodule pointing to an Apache ORC release, builds its C++ part
-(including vendored protobuf, lz4, zstd, ...), and links against that.
+(including vendored protobuf, lz4, zstd, ...), and links against that,
+unless the `ORC_USE_SYSTEM_LIBRARIES` environment variable is set.
 
 The `orcxx_derive` crate provides a custom `derive` macro.
 
