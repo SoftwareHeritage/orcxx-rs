@@ -78,6 +78,8 @@ fn main_() -> Result<(), BuildError> {
     build.link_bridge();
     build.link_cpp_deps();
 
+    println!("cargo:rerun-if-env-changed=DOCS_RS");
+    println!("cargo:rerun-if-env-changed=ORC_USE_SYSTEM_LIBRARIES");
     println!("cargo:rerun-if-changed={}", orc_src_dir.display());
     for module in BRIDGE_MODULES {
         println!("cargo:rerun-if-changed={}/{}", manifest_dir, module);
