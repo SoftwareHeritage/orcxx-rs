@@ -99,24 +99,34 @@ struct OrcxxBuild<'a> {
 impl<'a> OrcxxBuild<'a> {
     /// Configures Apache ORC build
     fn run_cmake(&self) -> Result<(), BuildError> {
-        let mut env = if std::env::var("DOCS_RS").is_ok()
+        let deps_home = vec![
+            "PROTOBUF_HOME",
+            "SNAPPY_HOME",
+            "ZLIB_HOME",
+            "LZ4_HOME",
+            "ZSTD_HOME",
+        ];
+        let mut env: Vec<_> = if std::env::var("DOCS_RS").is_ok()
             || std::env::var("ORC_USE_SYSTEM_LIBRARIES").is_ok()
         {
             // Force use of system libraries instead of downloading them
-            vec![
-                ("PROTOBUF_HOME", "/usr"),
-                ("SNAPPY_HOME", "/usr"),
-                ("ZLIB_HOME", "/usr"),
-                ("LZ4_HOME", "/usr"),
-                ("ZSTD_HOME", "/usr"),
-            ]
-            .into_iter()
-            .collect()
+            deps_home
+                .into_iter()
+                .map(|var_name| {
+                    (
+                        var_name,
+                        std::env::var(var_name).unwrap_or("/usr".to_owned()),
+                    )
+                })
+                .collect()
         } else {
-            vec![]
+            deps_home
+                .into_iter()
+                .flat_map(|var_name| std::env::var(var_name).map(|value| (var_name, value)))
+                .collect()
         };
-        env.push(("CFLAGS", "-fPIC"));
-        env.push(("CXXFLAGS", "-fPIC"));
+        env.push(("CFLAGS", "-fPIC".to_owned()));
+        env.push(("CXXFLAGS", "-fPIC".to_owned()));
 
         let status = process::Command::new("cmake")
             .arg(self.orc_src_dir)
