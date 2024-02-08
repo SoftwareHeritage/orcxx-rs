@@ -11,6 +11,12 @@
 //! As such, most of the APIs in this library operate on columns, rather than rows.
 //! In order to work on rows, readers need to "zip" columns together.
 //!
+//! # Compiling
+//!
+//! This crate uses a submodule pointing to an Apache ORC release, builds its C++ part
+//! (including vendored protobuf, lz4, zstd, ...), and links against that,
+//! unless the `ORC_USE_SYSTEM_LIBRARIES` environment variable is set.
+//!
 //! # Usage principles
 //!
 //! [`reader`] contains the entry points to parse a file, and reads into a
