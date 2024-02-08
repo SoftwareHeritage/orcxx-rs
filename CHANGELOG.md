@@ -1,3 +1,12 @@
+# v0.5.0
+
+*2024-02-08*
+
+* Compile with `-fPIC` to fix some linking issues
+* Fix tests
+* Add `ORC_USE_SYSTEM_LIBRARIES` env var to use system libraries instead of downloading
+* Display nicer error messages when CMake or Make returns an error
+
 # v0.4.2
 
 *2023-10-13*
