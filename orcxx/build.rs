@@ -156,7 +156,7 @@ impl<'a> OrcxxBuild<'a> {
             .status()
             .map_err(BuildError::MakeStartError)?;
 
-        if status.code().expect("cmake returned no status code") == 0 {
+        if status.code().expect("make returned no status code") == 0 {
             Ok(())
         } else {
             Err(BuildError::MakeStatus(status))
