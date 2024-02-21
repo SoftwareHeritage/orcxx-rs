@@ -41,7 +41,6 @@
 //! use std::num::NonZeroU64;
 //!
 //! use orcxx::deserialize::{OrcDeserialize, OrcStruct};
-//! use orcxx::row_iterator::RowIterator;
 //! use orcxx::reader;
 //! use orcxx_derive::OrcDeserialize;
 //!
@@ -54,10 +53,10 @@
 //! // Open file
 //! let orc_path = "../orcxx/orc/examples/TestOrcFile.test1.orc";
 //! let input_stream = reader::InputStream::from_local_file(orc_path).expect("Could not open .orc");
-//! let reader = reader::Reader::new(input_stream).expect("Could not read .orc");
-//!
 //! let batch_size = NonZeroU64::new(1024).unwrap();
-//! let mut rows: Vec<Option<Test1>> = RowIterator::new(&reader, batch_size)
+//! let mut rows: Vec<Option<Test1>> = reader::Reader::new(input_stream)
+//!     .expect("Could not read .orc")
+//!     .iter_rows(batch_size)
 //!     .expect("Could not open ORC file")
 //!     .collect();
 //!

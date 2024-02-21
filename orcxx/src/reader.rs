@@ -5,10 +5,14 @@
 
 //! Low-level column-oriented parser for ORC files.
 
+use std::num::NonZeroU64;
+
 use cxx::{let_cxx_string, UniquePtr};
 
-use errors::{OrcError, OrcResult};
+use deserialize::{CheckableKind, OrcDeserialize, OrcStruct};
+use errors::{OpenOrcError, OrcError, OrcResult};
 use kind;
+use row_iterator::RowIterator;
 use vector;
 
 #[cxx::bridge]
@@ -168,6 +172,16 @@ impl Reader {
     /// Returns an iterator of [`StripeInformation`]
     pub fn stripes(&self) -> impl Iterator<Item = StripeInformation> + '_ {
         (0..self.0.getNumberOfStripes()).map(move |i| StripeInformation(self.0.getStripe(i)))
+    }
+
+    /// Returns an iterator on rows
+    ///
+    /// Alias for `RowIterator<Row>::new(self, batch_size)`
+    pub fn iter_rows<Row: OrcDeserialize + OrcStruct + CheckableKind + Clone>(
+        &self,
+        batch_size: NonZeroU64,
+    ) -> Result<RowIterator<Row>, OpenOrcError> {
+        RowIterator::new(self, batch_size)
     }
 
     /// Returns the total number of rows in the file
