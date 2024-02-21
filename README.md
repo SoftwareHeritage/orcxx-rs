@@ -9,6 +9,9 @@ If it is, you need to make sure the dependencies are installed
 (`apt-get install libprotoc-dev liblz4-dev libsnappy-dev libzstd-dev zlib1g-dev`
 on Debian-based distributions).
 
+If you have issues when building the crate with linker errors agains libhdfs,
+you may try to define the `ORC_DISABLE_HDFS` environment variable.
+
 The `orcxx_derive` crate provides a custom `derive` macro.
 
 # `orcxx_derive` examples

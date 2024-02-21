@@ -49,8 +49,12 @@ pub(crate) mod ffi {
     unsafe extern "C++" {
         type InputStream;
         type ReaderOptions;
+        type ReaderMetrics;
 
-        fn readLocalFile(path: &CxxString) -> Result<UniquePtr<InputStream>>;
+        unsafe fn readLocalFile(
+            path: &CxxString,
+            metrics: *mut ReaderMetrics,
+        ) -> Result<UniquePtr<InputStream>>;
     }
 
     #[namespace = "orc"]
@@ -124,7 +128,7 @@ pub struct InputStream(UniquePtr<ffi::InputStream>);
 impl InputStream {
     pub fn from_local_file(file_name: &str) -> OrcResult<InputStream> {
         let_cxx_string!(cxx_file_name = file_name);
-        ffi::readLocalFile(&cxx_file_name)
+        unsafe { ffi::readLocalFile(&cxx_file_name, std::ptr::null_mut()) }
             .map(InputStream)
             .map_err(OrcError)
     }

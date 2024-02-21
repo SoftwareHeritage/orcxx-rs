@@ -80,6 +80,7 @@ fn main_() -> Result<(), BuildError> {
 
     println!("cargo:rerun-if-env-changed=DOCS_RS");
     println!("cargo:rerun-if-env-changed=ORC_USE_SYSTEM_LIBRARIES");
+    println!("cargo:rerun-if-env-changed=ORC_DISABLE_HDFS");
     println!("cargo:rerun-if-changed={}", orc_src_dir.display());
     for module in BRIDGE_MODULES {
         println!("cargo:rerun-if-changed={}/{}", manifest_dir, module);
@@ -128,11 +129,19 @@ impl<'a> OrcxxBuild<'a> {
         env.push(("CFLAGS", "-fPIC".to_owned()));
         env.push(("CXXFLAGS", "-fPIC".to_owned()));
 
-        let status = process::Command::new("cmake")
+        let mut command = process::Command::new("cmake");
+        let mut command = command
             .arg(self.orc_src_dir)
             .arg("-DBUILD_JAVA=OFF")
             .arg("-DBUILD_TOOLS=OFF")
-            .arg("-DBUILD_CPP_TESTS=OFF")
+            .arg("-DBUILD_CPP_TESTS=OFF");
+        // It might be necessary to disable linking against libhdfs on some
+        // systems for now...
+        if std::env::var("ORC_DISABLE_HDFS").is_ok() {
+            command = command.arg("-DBUILD_LIBHDFSPP=OFF");
+        }
+
+        let status = command
             .envs(env)
             .current_dir(self.orc_build_dir)
             .status()
@@ -156,7 +165,7 @@ impl<'a> OrcxxBuild<'a> {
             .status()
             .map_err(BuildError::MakeStartError)?;
 
-        if status.code().expect("cmake returned no status code") == 0 {
+        if status.code().expect("make returned no status code") == 0 {
             Ok(())
         } else {
             Err(BuildError::MakeStatus(status))
