@@ -351,7 +351,7 @@ impl<'a> BorrowedColumnVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for BorrowedColumnVectorBatch<'a> {}
+unsafe impl Send for BorrowedColumnVectorBatch<'_> {}
 
 /// A specialized [`ColumnVectorBatch`] whose values are known to be structures.
 ///
@@ -381,7 +381,7 @@ impl<'a> StructVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for StructVectorBatch<'a> {}
+unsafe impl Send for StructVectorBatch<'_> {}
 
 /// A specialized [`ColumnVectorBatch`] whose values are known to be integer-like.
 ///
@@ -394,7 +394,7 @@ impl_upcast!(
     ffi::LongVectorBatch_into_ColumnVectorBatch
 );
 
-impl<'a> LongVectorBatch<'a> {
+impl LongVectorBatch<'_> {
     /// Returns an `Option<u64>` iterator
     pub fn iter(&self) -> LongVectorBatchIterator {
         let data = ffi::LongVectorBatch_get_data(self.0);
@@ -417,7 +417,7 @@ impl<'a> LongVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for LongVectorBatch<'a> {}
+unsafe impl Send for LongVectorBatch<'_> {}
 
 /// Iterator on [`LongVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -452,7 +452,7 @@ impl<'a> LongVectorBatchIterator<'a> {
     }
 }
 
-impl<'a> Iterator for LongVectorBatchIterator<'a> {
+impl Iterator for LongVectorBatchIterator<'_> {
     type Item = Option<i64>;
 
     fn next(&mut self) -> Option<Option<i64>> {
@@ -511,7 +511,7 @@ impl<'a> NotNullLongVectorBatchIterator<'a> {
     }
 }
 
-impl<'a> Iterator for NotNullLongVectorBatchIterator<'a> {
+impl Iterator for NotNullLongVectorBatchIterator<'_> {
     type Item = i64;
 
     fn next(&mut self) -> Option<i64> {
@@ -541,7 +541,7 @@ impl_upcast!(
     ffi::DoubleVectorBatch_into_ColumnVectorBatch
 );
 
-impl<'a> DoubleVectorBatch<'a> {
+impl DoubleVectorBatch<'_> {
     /// Returns an `Option<f64>` iterator
     pub fn iter(&self) -> DoubleVectorBatchIterator {
         let data = ffi::DoubleVectorBatch_get_data(self.0).data();
@@ -584,7 +584,7 @@ impl<'a> DoubleVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for DoubleVectorBatch<'a> {}
+unsafe impl Send for DoubleVectorBatch<'_> {}
 
 /// Iterator on [`DoubleVectorBatch`] that may yield `None`
 #[derive(Debug, Clone)]
@@ -597,7 +597,7 @@ pub struct DoubleVectorBatchIterator<'a> {
     num_elements: isize,
 }
 
-impl<'a> Iterator for DoubleVectorBatchIterator<'a> {
+impl Iterator for DoubleVectorBatchIterator<'_> {
     type Item = Option<f64>;
 
     fn next(&mut self) -> Option<Option<f64>> {
@@ -637,7 +637,7 @@ pub struct NotNullDoubleVectorBatchIterator<'a> {
     num_elements: isize,
 }
 
-impl<'a> Iterator for NotNullDoubleVectorBatchIterator<'a> {
+impl Iterator for NotNullDoubleVectorBatchIterator<'_> {
     type Item = f64;
 
     fn next(&mut self) -> Option<f64> {
@@ -667,7 +667,7 @@ impl_upcast!(
     ffi::StringVectorBatch_into_ColumnVectorBatch
 );
 
-impl<'a> StringVectorBatch<'a> {
+impl StringVectorBatch<'_> {
     /// Returns an `Option<&[u8]>` iterator
     pub fn iter(&self) -> StringVectorBatchIterator {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
@@ -788,7 +788,7 @@ impl<'a> StringVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for StringVectorBatch<'a> {}
+unsafe impl Send for StringVectorBatch<'_> {}
 
 /// Iterator on [`StringVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -883,7 +883,7 @@ impl_upcast!(
     ffi::TimestampVectorBatch_into_ColumnVectorBatch
 );
 
-impl<'a> TimestampVectorBatch<'a> {
+impl TimestampVectorBatch<'_> {
     /// Returns an `Option<(i64, i64)>` iterator
     pub fn iter(&self) -> TimestampVectorBatchIterator {
         let data = ffi::TimestampVectorBatch_get_data(self.0).data();
@@ -929,7 +929,7 @@ impl<'a> TimestampVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for TimestampVectorBatch<'a> {}
+unsafe impl Send for TimestampVectorBatch<'_> {}
 
 /// Iterator on [`TimestampVectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -942,7 +942,7 @@ pub struct TimestampVectorBatchIterator<'a> {
     num_elements: isize,
 }
 
-impl<'a> Iterator for TimestampVectorBatchIterator<'a> {
+impl Iterator for TimestampVectorBatchIterator<'_> {
     type Item = Option<(i64, i64)>;
 
     fn next(&mut self) -> Option<Option<(i64, i64)>> {
@@ -982,7 +982,7 @@ pub struct NotNullTimestampVectorBatchIterator<'a> {
     num_elements: isize,
 }
 
-impl<'a> Iterator for NotNullTimestampVectorBatchIterator<'a> {
+impl Iterator for NotNullTimestampVectorBatchIterator<'_> {
     type Item = (i64, i64);
 
     fn next(&mut self) -> Option<(i64, i64)> {
@@ -1086,7 +1086,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal64VectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for Decimal64VectorBatch<'a> {}
+unsafe impl Send for Decimal64VectorBatch<'_> {}
 
 /// Iterator on [`Decimal64VectorBatch`] that may yield `None`.
 #[derive(Debug, Clone)]
@@ -1100,7 +1100,7 @@ pub struct Decimal64VectorBatchIterator<'a> {
     scale: u32,
 }
 
-impl<'a> Iterator for Decimal64VectorBatchIterator<'a> {
+impl Iterator for Decimal64VectorBatchIterator<'_> {
     type Item = Option<Decimal>;
 
     fn next(&mut self) -> Option<Option<Decimal>> {
@@ -1141,7 +1141,7 @@ pub struct NotNullDecimal64VectorBatchIterator<'a> {
     scale: u32,
 }
 
-impl<'a> Iterator for NotNullDecimal64VectorBatchIterator<'a> {
+impl Iterator for NotNullDecimal64VectorBatchIterator<'_> {
     type Item = Decimal;
 
     fn next(&mut self) -> Option<Decimal> {
@@ -1234,7 +1234,7 @@ impl<'a> DecimalVectorBatch<'a> for Decimal128VectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for Decimal128VectorBatch<'a> {}
+unsafe impl Send for Decimal128VectorBatch<'_> {}
 
 /// Iterator on [`Decimal128VectorBatch`]
 #[derive(Debug, Clone)]
@@ -1248,7 +1248,7 @@ pub struct Decimal128VectorBatchIterator<'a> {
     scale: u32,
 }
 
-impl<'a> Iterator for Decimal128VectorBatchIterator<'a> {
+impl Iterator for Decimal128VectorBatchIterator<'_> {
     type Item = Option<Decimal>;
 
     fn next(&mut self) -> Option<Option<Decimal>> {
@@ -1297,7 +1297,7 @@ pub struct NotNullDecimal128VectorBatchIterator<'a> {
     scale: u32,
 }
 
-impl<'a> Iterator for NotNullDecimal128VectorBatchIterator<'a> {
+impl Iterator for NotNullDecimal128VectorBatchIterator<'_> {
     type Item = Decimal;
 
     fn next(&mut self) -> Option<Decimal> {
@@ -1368,7 +1368,7 @@ impl<'a> ListVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for ListVectorBatch<'a> {}
+unsafe impl Send for ListVectorBatch<'_> {}
 
 /// A specialized [`ColumnVectorBatch`] whose values are dictionaries with arbitrary types
 /// as keys and values
@@ -1421,7 +1421,7 @@ impl<'a> MapVectorBatch<'a> {
     }
 }
 
-unsafe impl<'a> Send for MapVectorBatch<'a> {}
+unsafe impl Send for MapVectorBatch<'_> {}
 
 /// Iterator on the `offset` columns of [`ListVectorBatch`] and [`MapVectorBatch`],
 /// which may yield `None`.
@@ -1461,7 +1461,7 @@ impl<'a> RangeVectorBatchIterator<'a> {
     }
 }
 
-impl<'a> Iterator for RangeVectorBatchIterator<'a> {
+impl Iterator for RangeVectorBatchIterator<'_> {
     type Item = Option<Range<usize>>;
 
     fn next(&mut self) -> Option<Option<Range<usize>>> {
@@ -1529,7 +1529,7 @@ impl<'a> NotNullRangeVectorBatchIterator<'a> {
     }
 }
 
-impl<'a> Iterator for NotNullRangeVectorBatchIterator<'a> {
+impl Iterator for NotNullRangeVectorBatchIterator<'_> {
     type Item = Range<usize>;
 
     fn next(&mut self) -> Option<Range<usize>> {

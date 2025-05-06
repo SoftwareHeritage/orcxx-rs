@@ -93,7 +93,7 @@ impl<T: OrcDeserialize + Clone> ParallelRowIterator<T> {
             .try_into()
             .expect("row count overflows usize");
         Ok(ParallelRowIterator {
-            reader: reader,
+            reader,
             row_reader_options: options,
             batch_size,
             start: 0,
@@ -142,7 +142,7 @@ struct RowProducer<'a, T: OrcDeserialize + Clone + Send + Sync> {
     end: usize,
 }
 
-impl<'a, T: OrcDeserialize + Clone + Send + Sync> Producer for RowProducer<'a, T> {
+impl<T: OrcDeserialize + Clone + Send + Sync> Producer for RowProducer<'_, T> {
     type Item = T;
     type IntoIter = std::iter::Take<RowIterator<T>>;
 

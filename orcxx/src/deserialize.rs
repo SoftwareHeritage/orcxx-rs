@@ -561,8 +561,8 @@ pub struct MultiMap<'c, T: Sized, F> {
     f: F,
 }
 
-unsafe impl<'a, 'c, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a>
-    for &mut MultiMap<'c, T, F>
+unsafe impl<'a, V: Sized + 'a, V2: Sized + 'a, T, F> DeserializationTarget<'a>
+    for &mut MultiMap<'_, T, F>
 where
     F: Copy + for<'b> FnMut(&'b mut V) -> &'b mut V2,
     T: DeserializationTarget<'a, Item = V>,

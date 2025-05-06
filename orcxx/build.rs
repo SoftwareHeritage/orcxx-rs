@@ -97,7 +97,7 @@ struct OrcxxBuild<'a> {
     orc_build_include_dir: &'a str,
 }
 
-impl<'a> OrcxxBuild<'a> {
+impl OrcxxBuild<'_> {
     /// Configures Apache ORC build
     fn run_cmake(&self) -> Result<(), BuildError> {
         let deps_home = vec![
@@ -201,7 +201,7 @@ impl<'a> OrcxxBuild<'a> {
             ("zlib", "z"),
             ("zstd", "zstd"),
         ] {
-            let thirdparty_path = self.orc_build_dir.join(&format!(
+            let thirdparty_path = self.orc_build_dir.join(format!(
                 "c++/libs/thirdparty/{}_ep-install/lib",
                 thirdparty_name
             ));

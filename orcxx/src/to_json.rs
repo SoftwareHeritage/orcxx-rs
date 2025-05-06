@@ -48,7 +48,7 @@ where
 
 /// Given a set of columns (as a [`ColumnTree`]), returns a vector of rows
 /// represented as a JSON-like data structure.
-pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
+pub fn columntree_to_json_rows(tree: ColumnTree<'_>) -> Vec<JsonValue> {
     match tree {
         ColumnTree::Boolean(column) => {
             map_nullable_json_values(column.iter(), |b| JsonValue::Boolean(b != 0))
@@ -67,7 +67,7 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
         }),
         ColumnTree::Timestamp(column) => {
             map_nullable_json_values(column.iter(), |(seconds, nanoseconds)| {
-                let mut s = chrono::NaiveDateTime::from_timestamp_opt(
+                let mut s = chrono::DateTime::from_timestamp(
                     seconds,
                     nanoseconds
                         .try_into()
@@ -120,7 +120,7 @@ pub fn columntree_to_json_rows<'a>(tree: ColumnTree<'a>) -> Vec<JsonValue> {
         }),
         ColumnTree::Binary(column) => map_nullable_json_values(column.iter(), |s| {
             JsonValue::Array(
-                s.into_iter()
+                s.iter()
                     .map(|&byte| JsonValue::Number(byte.into()))
                     .collect(),
             )
