@@ -13,8 +13,8 @@ fn main() {
         println!(
             "{}",
             json::stringify_pretty(
-                json::parse(line.as_ref().expect(&format!("Could not read line")))
-                    .expect(&format!("Could not parse {:?} as JSON", line)),
+                json::parse(line.as_ref().expect("Could not read line"))
+                    .unwrap_or_else(|_| panic!("{}", "Could not parse {line:?} as JSON")),
                 4
             )
         );

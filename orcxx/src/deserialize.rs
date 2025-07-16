@@ -65,7 +65,7 @@ fn check_kind_equals(
             type_name,
             expected_kinds
                 .iter()
-                .map(|k| format!("{:?}", k))
+                .map(|k| format!("{k:?}"))
                 .collect::<Vec<_>>()
                 .join("/"),
             got_kind
@@ -261,8 +261,7 @@ impl CheckableKind for Decimal {
         match kind {
             Kind::Decimal { .. } => Ok(()),
             _ => Err(format!(
-                "Decimal must be decoded from ORC Decimal, not ORC {:?}",
-                kind
+                "Decimal must be decoded from ORC Decimal, not ORC {kind:?}"
             )),
         }
     }
@@ -356,7 +355,7 @@ impl<T: CheckableKind> CheckableKind for Vec<T> {
     fn check_kind(kind: &Kind) -> Result<(), String> {
         match kind {
             Kind::List(inner) => T::check_kind(inner),
-            _ => Err(format!("Must be a List, not {:?}", kind)),
+            _ => Err(format!("Must be a List, not {kind:?}")),
         }
     }
 }

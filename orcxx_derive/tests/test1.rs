@@ -83,14 +83,12 @@ fn test_with_batch_size<
         assert_eq!(
             expected_rows.len() - i,
             iter.len(),
-            "Number of rows changed halfway (at row {})",
-            i
+            "Number of rows changed halfway (at row {i})"
         );
         assert_eq!(
             iter.next().as_ref(),
             Some(expected_row),
-            "Inconsistent row #{}",
-            i
+            "Inconsistent row #{i}"
         );
     }
     assert_eq!(iter.next(), None, "Too many rows");
@@ -100,8 +98,7 @@ fn test_with_batch_size<
         assert_eq!(
             i,
             iter.len(),
-            "Number of rows changed halfway (at row {})",
-            i
+            "Number of rows changed halfway (at row {i})"
         );
         assert_eq!(
             iter.next_back().as_ref(),

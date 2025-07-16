@@ -29,7 +29,7 @@ pub enum BuildError {
 
 fn main() {
     if let Err(e) = main_() {
-        eprintln!("Failed to build the ORC C++ Core library: {}", e);
+        eprintln!("Failed to build the ORC C++ Core library: {e}");
         process::exit(1);
     }
 }
@@ -83,9 +83,9 @@ fn main_() -> Result<(), BuildError> {
     println!("cargo:rerun-if-env-changed=ORC_DISABLE_HDFS");
     println!("cargo:rerun-if-changed={}", orc_src_dir.display());
     for module in BRIDGE_MODULES {
-        println!("cargo:rerun-if-changed={}/{}", manifest_dir, module);
+        println!("cargo:rerun-if-changed={manifest_dir}/{module}");
     }
-    println!("cargo:rerun-if-changed={}/src/cpp-utils.hh", manifest_dir);
+    println!("cargo:rerun-if-changed={manifest_dir}/src/cpp-utils.hh");
 
     Ok(())
 }
@@ -187,7 +187,7 @@ impl OrcxxBuild<'_> {
         let liborc_path = liborc_path
             .to_str()
             .unwrap_or_else(|| panic!("Could not convert {} to &str", liborc_path.display()));
-        println!("cargo:rustc-link-search={}", liborc_path);
+        println!("cargo:rustc-link-search={liborc_path}");
         println!("cargo:rustc-link-lib=orc");
     }
 
@@ -202,14 +202,13 @@ impl OrcxxBuild<'_> {
             ("zstd", "zstd"),
         ] {
             let thirdparty_path = self.orc_build_dir.join(format!(
-                "c++/libs/thirdparty/{}_ep-install/lib",
-                thirdparty_name
+                "c++/libs/thirdparty/{thirdparty_name}_ep-install/lib"
             ));
             let thirdparty_path = thirdparty_path.to_str().unwrap_or_else(|| {
                 panic!("Could not convert {} to &str", thirdparty_path.display())
             });
-            println!("cargo:rustc-link-search={}", thirdparty_path);
-            println!("cargo:rustc-link-lib={}", thirdparty_libname);
+            println!("cargo:rustc-link-search={thirdparty_path}");
+            println!("cargo:rustc-link-lib={thirdparty_libname}");
         }
     }
 }

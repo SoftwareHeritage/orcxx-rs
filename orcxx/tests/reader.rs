@@ -35,7 +35,7 @@ fn empty_file() {
 #[test]
 fn nonorc_file() {
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    temp_file.write(br#"{"foo": "bar"}"#).unwrap();
+    temp_file.write_all(br#"{"foo": "bar"}"#).unwrap();
     temp_file.flush().unwrap();
     let stream_res = reader::InputStream::from_local_file(&temp_file.path().display().to_string())
         .expect("could not open local file");
@@ -49,7 +49,7 @@ fn select_column() {
         .expect("Could not read");
     let reader = reader::Reader::new(input_stream).expect("Could not create reader");
     let options = reader::RowReaderOptions::default().include_names(vec!["byte1", "string1"]);
-    assert!(matches!(reader.row_reader(&options), Ok(_)));
+    assert!(reader.row_reader(&options).is_ok());
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn read_file() {
                         )
                     }
                 }
-                Err(e) => println!("failed to cast to StringDataBuffer: {:?}", e),
+                Err(e) => println!("failed to cast to StringDataBuffer: {e:?}"),
             }
         }
     }
@@ -146,7 +146,7 @@ fn read_file() {
     assert_eq!(total_elements, 2);
     assert_eq!(
         all_strings,
-        vec!["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
+        ["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
             .iter()
             .map(|s| s.to_owned())
             .collect::<Vec<_>>()
@@ -185,7 +185,7 @@ fn seek() {
                             all_ints.push(i.unwrap())
                         }
                     }
-                    Err(e) => println!("failed to cast to LongDataBuffer: {:?}", e),
+                    Err(e) => println!("failed to cast to LongDataBuffer: {e:?}"),
                 }
                 match vector.try_into_strings() {
                     Ok(string_vector) => {
@@ -197,7 +197,7 @@ fn seek() {
                             )
                         }
                     }
-                    Err(e) => println!("failed to cast to StringDataBuffer: {:?}", e),
+                    Err(e) => println!("failed to cast to StringDataBuffer: {e:?}"),
                 }
             }
         }
@@ -225,7 +225,7 @@ fn seek() {
     );
     assert_eq!(
         all_strings,
-        vec!["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
+        ["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
             .iter()
             .map(|s| s.to_owned())
             .collect::<Vec<_>>()
@@ -252,7 +252,7 @@ fn seek() {
     );
     assert_eq!(
         all_strings,
-        vec!["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
+        ["\0\u{1}\u{2}\u{3}\u{4}", "", "hi", "bye"]
             .iter()
             .map(|s| s.to_owned())
             .collect::<Vec<_>>()
@@ -265,7 +265,7 @@ fn seek() {
     assert_eq!(all_ints, vec![1, 100, 2048, 65536, 9223372036854775807],);
     assert_eq!(
         all_strings,
-        vec!["", "bye"]
+        ["", "bye"]
             .iter()
             .map(|s| s.to_owned())
             .collect::<Vec<_>>()

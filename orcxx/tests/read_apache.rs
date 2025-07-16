@@ -50,7 +50,7 @@ fn test_expected_file(orc_path: &str, jsn_gz_path: &str) {
     // Reencode the input to normalize it
     let expected_lines = expected_json
         .split("\n")
-        .filter(|line| line.len() > 0)
+        .filter(|line| !line.is_empty())
         .map(|line| json::parse(line).expect("Could not parse line in .jsn.gz"))
         .map(|o| json::stringify_pretty(o, 4))
         .collect::<Vec<_>>()
