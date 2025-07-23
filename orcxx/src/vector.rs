@@ -274,7 +274,7 @@ impl<'a> ColumnVectorBatch<'a> for &'a OwnedColumnVectorBatch {
 }
 
 impl OwnedColumnVectorBatch {
-    pub fn borrow(&self) -> BorrowedColumnVectorBatch {
+    pub fn borrow(&self) -> BorrowedColumnVectorBatch<'_> {
         BorrowedColumnVectorBatch(&self.0)
     }
 }
@@ -396,7 +396,7 @@ impl_upcast!(
 
 impl LongVectorBatch<'_> {
     /// Returns an `Option<u64>` iterator
-    pub fn iter(&self) -> LongVectorBatchIterator {
+    pub fn iter(&self) -> LongVectorBatchIterator<'_> {
         let data = ffi::LongVectorBatch_get_data(self.0);
         let num_elements = self.num_elements();
         let not_null = self.not_null_ptr();
@@ -405,7 +405,7 @@ impl LongVectorBatch<'_> {
     }
 
     /// Returns a `u64` iterator if there are no null values, or `None` if there are
-    pub fn try_iter_not_null(&self) -> Option<NotNullLongVectorBatchIterator> {
+    pub fn try_iter_not_null(&self) -> Option<NotNullLongVectorBatchIterator<'_>> {
         let data = ffi::LongVectorBatch_get_data(self.0);
         let num_elements = self.num_elements();
 
@@ -543,7 +543,7 @@ impl_upcast!(
 
 impl DoubleVectorBatch<'_> {
     /// Returns an `Option<f64>` iterator
-    pub fn iter(&self) -> DoubleVectorBatchIterator {
+    pub fn iter(&self) -> DoubleVectorBatchIterator<'_> {
         let data = ffi::DoubleVectorBatch_get_data(self.0).data();
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::DoubleVectorBatch_into_ColumnVectorBatch(self.0));
@@ -563,7 +563,7 @@ impl DoubleVectorBatch<'_> {
     }
 
     /// Returns a `f64` iterator if there are no null values, or `None` if there are
-    pub fn try_iter_not_null(&self) -> Option<NotNullDoubleVectorBatchIterator> {
+    pub fn try_iter_not_null(&self) -> Option<NotNullDoubleVectorBatchIterator<'_>> {
         let data = ffi::DoubleVectorBatch_get_data(self.0).data();
         let vector_batch =
             BorrowedColumnVectorBatch(ffi::DoubleVectorBatch_into_ColumnVectorBatch(self.0));
@@ -669,7 +669,7 @@ impl_upcast!(
 
 impl StringVectorBatch<'_> {
     /// Returns an `Option<&[u8]>` iterator
-    pub fn iter(&self) -> StringVectorBatchIterator {
+    pub fn iter(&self) -> StringVectorBatchIterator<'_> {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
         let lengths = ffi::StringVectorBatch_get_length(self.0).data();
         let vector_batch =
@@ -690,7 +690,7 @@ impl StringVectorBatch<'_> {
     }
 
     /// Returns a `&[u8]` iterator if there are no null values, or `None` if there are
-    pub fn try_iter_not_null(&self) -> Option<NotNullStringVectorBatchIterator> {
+    pub fn try_iter_not_null(&self) -> Option<NotNullStringVectorBatchIterator<'_>> {
         let data = ffi::StringVectorBatch_get_data(self.0).data();
         let lengths = ffi::StringVectorBatch_get_length(self.0).data();
         let vector_batch =
@@ -885,7 +885,7 @@ impl_upcast!(
 
 impl TimestampVectorBatch<'_> {
     /// Returns an `Option<(i64, i64)>` iterator
-    pub fn iter(&self) -> TimestampVectorBatchIterator {
+    pub fn iter(&self) -> TimestampVectorBatchIterator<'_> {
         let data = ffi::TimestampVectorBatch_get_data(self.0).data();
         let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
         let vector_batch =
@@ -906,7 +906,7 @@ impl TimestampVectorBatch<'_> {
     }
 
     /// Returns an `(i64, i64)` iterator if there are no null values, or `None` if there are
-    pub fn try_iter_not_null(&self) -> Option<NotNullTimestampVectorBatchIterator> {
+    pub fn try_iter_not_null(&self) -> Option<NotNullTimestampVectorBatchIterator<'_>> {
         let data = ffi::TimestampVectorBatch_get_data(self.0).data();
         let nanoseconds = ffi::TimestampVectorBatch_get_nanoseconds(self.0).data();
         let vector_batch =

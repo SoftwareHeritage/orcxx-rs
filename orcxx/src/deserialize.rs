@@ -532,7 +532,7 @@ pub unsafe trait DeserializationTarget<'a> {
         self.len() == 0
     }
 
-    fn map<B, F>(&mut self, f: F) -> MultiMap<Self, F>
+    fn map<B, F>(&mut self, f: F) -> MultiMap<'_, Self, F>
     where
         Self: Sized,
         F: FnMut(&mut Self::Item) -> &mut B,
